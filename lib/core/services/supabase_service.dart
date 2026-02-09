@@ -24,6 +24,7 @@ class SupabaseService {
     required String fullName,
     required String ecNumber,
     required String role,
+    required String gender,
     String? station,
     String? phoneNumber,
   }) async {
@@ -41,6 +42,7 @@ class SupabaseService {
         'ec_number': ecNumber,
         'full_name': fullName,
         'role': role,
+        'gender': gender,
         'email': email,
         'phone_number': phoneNumber,
         'station': station,
@@ -226,6 +228,119 @@ class SupabaseService {
       });
     } catch (e) {
       debugPrint('Audit Log Error: $e');
+    }
+  }
+
+  static Future<Map<String, int>> getDriverAgeStats() async {
+    try {
+      final response = await client.from('drivers').select('dob');
+      final List<dynamic> data = response as List<dynamic>;
+
+      int group18to25 = 0;
+      int group26to35 = 0;
+      int group36to50 = 0;
+      int group51plus = 0;
+
+      final now = DateTime.now();
+
+      for (var item in data) {
+        final dobString = item['dob'] as String?;
+        if (dobString == null) continue;
+
+        final dob = DateTime.tryParse(dobString);
+        if (dob == null) continue;
+
+        final age = now.year - dob.year;
+        if (age >= 18 && age <= 25)
+          group18to25++;
+        else if (age >= 26 && age <= 35)
+          group26to35++;
+        else if (age >= 36 && age <= 50)
+          group36to50++;
+        else if (age >= 51)
+          group51plus++;
+      }
+
+      return {
+        '18-25': group18to25,
+        '26-35': group26to35,
+        '36-50': group36to50,
+        '51+': group51plus,
+      };
+    } catch (e) {
+      debugPrint('Age Stats Error: $e');
+      return {};
+    }
+  }
+
+  static Future<Map<String, int>> getLicenseClassStats() async {
+    try {
+      final response = await client
+          .from('driver_licenses')
+          .select('license_code');
+      // response is List of Maps: [{'license_code': '2'}, {'license_code': '4'}]
+      final List<dynamic> data = response as List<dynamic>;
+
+      final Map<String, int> stats = {};
+
+      for (var item in data) {
+        final code = item['license_code'] as String?;
+        if (code != null) {
+          stats[code] = (stats[code] ?? 0) + 1;
+        }
+      }
+
+      return stats;
+    } catch (e) {
+      debugPrint('License Stats Error: $e');
+      return {};
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getRegistrationTrends() async {
+    try {
+      // Get last 7 days of registrations
+      final sevenDaysAgo = DateTime.now()
+          .subtract(const Duration(days: 7))
+          .toIso8601String();
+
+      final response = await client
+          .from('drivers')
+          .select('created_at')
+          .gte('created_at', sevenDaysAgo)
+          .order('created_at', ascending: true);
+
+      final List<dynamic> data = response as List<dynamic>;
+
+      // Group by day
+      final Map<String, int> dailyCounts = {};
+
+      // Initialize last 7 days with 0
+      for (int i = 6; i >= 0; i--) {
+        final date = DateTime.now().subtract(Duration(days: i));
+        final key = "${date.day}/${date.month}";
+        dailyCounts[key] = 0;
+      }
+
+      for (var item in data) {
+        final createdString = item['created_at'] as String?;
+        if (createdString != null) {
+          final date = DateTime.tryParse(createdString)?.toLocal();
+          if (date != null) {
+            final key = "${date.day}/${date.month}";
+            if (dailyCounts.containsKey(key)) {
+              dailyCounts[key] = (dailyCounts[key] ?? 0) + 1;
+            }
+          }
+        }
+      }
+
+      return dailyCounts.entries
+          .map((e) => {'date': e.key, 'count': e.value})
+          .toList();
+    } catch (e) {
+      debugPrint('Registration Trends Error: $e');
+      return [];
     }
   }
 

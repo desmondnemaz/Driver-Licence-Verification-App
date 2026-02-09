@@ -26,6 +26,9 @@ class _AuthScreenState extends State<AuthScreen> {
   final _ecNumberController = TextEditingController();
   final _stationController = TextEditingController();
 
+  String? _gender;
+  final List<String> _genderOptions = ['Male', 'Female'];
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -52,6 +55,7 @@ class _AuthScreenState extends State<AuthScreen> {
         fullName: _fullNameController.text.trim(),
         ecNumber: _ecNumberController.text.trim(),
         role: widget.role,
+        gender: _gender!,
         station: _stationController.text.trim(),
       );
       if (success) {
@@ -74,20 +78,26 @@ class _AuthScreenState extends State<AuthScreen> {
         await SupabaseService.signOut();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile not found. Please contact admin.')),
+          const SnackBar(
+            content: Text('Profile not found. Please contact admin.'),
+          ),
         );
       } else {
         await SupabaseService.signOut();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account waiting for admin approval (is_approved=false)')),
+          const SnackBar(
+            content: Text(
+              'Account waiting for admin approval (is_approved=false)',
+            ),
+          ),
         );
       }
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -96,7 +106,9 @@ class _AuthScreenState extends State<AuthScreen> {
     final roleName = widget.role.replaceAll('_', ' ');
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isLogin ? 'Login as $roleName' : 'Register as $roleName')),
+      appBar: AppBar(
+        title: Text(_isLogin ? 'Login as $roleName' : 'Register as $roleName'),
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -109,27 +121,61 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   Text(
                     _isLogin ? 'Welcome Back' : 'Create Account',
-                    style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
                   if (!_isLogin) ...[
-                    _buildField(_fullNameController, 'Full Name', Icons.person_outline),
+                    _buildField(
+                      _fullNameController,
+                      'Full Name',
+                      Icons.person_outline,
+                    ),
                     const SizedBox(height: 16),
-                    _buildField(_ecNumberController, 'EC Number', Icons.badge_outlined),
+                    DropdownButtonFormField<String>(
+                      value: _gender,
+                      items: _genderOptions
+                          .map(
+                            (g) => DropdownMenuItem(value: g, child: Text(g)),
+                          )
+                          .toList(),
+                      onChanged: (val) => setState(() => _gender = val),
+                      decoration: InputDecoration(
+                        labelText: 'Gender',
+                        prefixIcon: const Icon(Icons.male),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (val) => val == null ? 'Required' : null,
+                    ),
                     const SizedBox(height: 16),
-                    _buildField(_stationController, 'Station / Location', Icons.location_on_outlined),
+                    _buildField(
+                      _ecNumberController,
+                      'EC Number',
+                      Icons.badge_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildField(
+                      _stationController,
+                      'Station / Location',
+                      Icons.location_on_outlined,
+                    ),
                     const SizedBox(height: 16),
                   ],
                   _buildField(_emailController, 'Email', Icons.email_outlined),
                   const SizedBox(height: 16),
                   _buildField(
-                    _passwordController, 
-                    'Password', 
-                    Icons.lock_outline, 
+                    _passwordController,
+                    'Password',
+                    Icons.lock_outline,
                     obscure: _obscurePassword,
                     isPassword: true,
-                    onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+                    onToggleObscure: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                   if (!_isLogin) ...[
                     const SizedBox(height: 16),
@@ -139,9 +185,11 @@ class _AuthScreenState extends State<AuthScreen> {
                       Icons.lock_reset_rounded,
                       obscure: _obscurePassword,
                       isPassword: true,
-                      onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+                      onToggleObscure: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                       validator: (val) {
-                        if (val != _passwordController.text) return 'Passwords do not match';
+                        if (val != _passwordController.text)
+                          return 'Passwords do not match';
                         return null;
                       },
                     ),
@@ -159,7 +207,11 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                   TextButton(
                     onPressed: () => setState(() => _isLogin = !_isLogin),
-                    child: Text(_isLogin ? 'Need an account? Sign Up' : 'Already have an account? Login'),
+                    child: Text(
+                      _isLogin
+                          ? 'Need an account? Sign Up'
+                          : 'Already have an account? Login',
+                    ),
                   ),
                 ],
               ),
@@ -171,8 +223,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildField(
-    TextEditingController controller, 
-    String label, 
+    TextEditingController controller,
+    String label,
     IconData icon, {
     bool obscure = false,
     bool isPassword = false,
@@ -185,12 +237,16 @@ class _AuthScreenState extends State<AuthScreen> {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
-        suffixIcon: isPassword 
-          ? IconButton(
-              icon: Icon(obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded),
-              onPressed: onToggleObscure,
-            ) 
-          : null,
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  obscure
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                ),
+                onPressed: onToggleObscure,
+              )
+            : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
       validator: validator ?? (val) => val!.isEmpty ? 'Required' : null,

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:driver_license_verifier_app/features/admin/presentation/screens/audit_log_screen.dart';
+import 'package:driver_license_verifier_app/features/admin/presentation/screens/analytics_dashboard.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class AdminDashboard extends StatefulWidget {
@@ -138,22 +139,57 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildWelcome(ResponsiveSize res) {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'System Overview',
-          style: GoogleFonts.outfit(
-            fontSize: res.pick(mobile: 28.0, tablet: 32.0, desktop: 36.0),
-            fontWeight: FontWeight.bold,
-            color: AppColors.textMain,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'System Overview',
+              style: GoogleFonts.outfit(
+                fontSize: res.pick(mobile: 28.0, tablet: 32.0, desktop: 36.0),
+                fontWeight: FontWeight.bold,
+                color: AppColors.textMain,
+              ),
+            ),
+            Text(
+              'Monitoring national license activity',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: res.bodyFont,
+              ),
+            ),
+          ],
         ),
-        Text(
-          'Monitoring national license activity',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: res.bodyFont,
+        TextButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AnalyticsDashboard(),
+              ),
+            );
+          },
+          icon: Icon(
+            Icons.analytics_outlined,
+            color: AppColors.zimYellow,
+            size: res.icon * 0.8,
+          ),
+          label: Text(
+            'Analytics',
+            style: TextStyle(
+              color: AppColors.textMain,
+              fontSize: res.buttonFont,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            backgroundColor: AppColors.zimYellow.withValues(alpha: 0.1),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
           ),
         ),
       ],
@@ -379,40 +415,66 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildQuickActions(BuildContext context, ResponsiveSize res) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _actionButton(
-            context,
-            'Manage Users',
-            Icons.manage_accounts_outlined,
-            AppColors.zimGreen,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const UserManagementScreen(),
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                context,
+                'Manage Users',
+                Icons.manage_accounts_outlined,
+                AppColors.zimGreen,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UserManagementScreen(),
+                  ),
+                ),
+                res,
               ),
             ),
-            res,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _actionButton(
-            context,
-            'Register Driver',
-            Icons.person_add_alt_1_outlined,
-            AppColors.textMain,
-            () {
-              Navigator.push(
+            const SizedBox(width: 16),
+            Expanded(
+              child: _actionButton(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const RegistrationScreen(),
+                'Register Driver',
+                Icons.person_add_alt_1_outlined,
+                AppColors.textMain,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RegistrationScreen(),
+                    ),
+                  );
+                },
+                res,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                context,
+                'Analytics',
+                Icons.analytics_outlined,
+                AppColors.zimYellow,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnalyticsDashboard(),
+                  ),
                 ),
-              );
-            },
-            res,
-          ),
+                res,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Spacer(),
+          ],
         ),
       ],
     );
