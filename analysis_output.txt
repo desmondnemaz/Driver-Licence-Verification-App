@@ -1,0 +1,23 @@
+Analyzing driver_license_verifier_app...                        
+
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\screens\admin_dashboard.dart:92:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\screens\admin_dashboard.dart:105:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\screens\admin_dashboard.dart:224:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\admin\presentation\screens\admin_dashboard.dart:232:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\driver_management\presentation\screens\registration_screen.dart:299:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\license_verifier\presentation\screens\result_screen.dart:114:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\license_verifier\presentation\screens\result_screen.dart:117:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\license_verifier\presentation\screens\scanner_screen.dart:148:31 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\license_verifier\presentation\screens\scanner_screen.dart:158:67 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\license_verifier\presentation\screens\scanner_screen.dart:181:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\license_verifier\presentation\screens\scanner_screen.dart:258:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main.dart:54:34 - deprecated_member_use
+  error - The getter 'pwc_rounded' isn't defined for the type 'Icons' - lib\main.dart:117:21 - undefined_getter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main.dart:191:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main.dart:197:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main.dart:206:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main.dart:234:66 - deprecated_member_use
+   info - 'textScaleFactorOf' is deprecated and shouldn't be used. Use textScalerOf instead. Use of textScaleFactor was deprecated in preparation for the upcoming nonlinear text scaling support. This feature was deprecated after v3.12.0-2.0.pre - lib\utils\responsive_sizes.dart:15:36 - deprecated_member_use
+  error - The name 'MyApp' isn't a class - test\widget_test.dart:16:35 - creation_with_non_type
+
+19 issues found. (ran in 3.3s)

@@ -1,0 +1,7 @@
+Resolving dependencies...
+Because driver_license_verifier_app depends on crop_image ^1.1.0 which doesn't match any versions, version solving failed.
+
+
+You can try the following suggestion to make the pubspec resolve:
+* Consider downgrading your constraint on crop_image: flutter pub add crop_image:^1.0.17
+Failed to update packages.
