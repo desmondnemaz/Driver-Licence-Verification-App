@@ -100,8 +100,9 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     if (act.contains('VERIFY')) statusColor = AppColors.zimGreen;
     if (act.contains('FAIL') ||
         act.contains('DELETE') ||
-        act.contains('ATTEMPT'))
+        act.contains('ATTEMPT')) {
       statusColor = AppColors.zimRed;
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

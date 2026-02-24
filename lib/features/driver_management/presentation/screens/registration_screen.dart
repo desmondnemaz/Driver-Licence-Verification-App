@@ -323,19 +323,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             desktop: 32.0,
                           ),
                         ),
-                        _buildDatePicker(
-                          '3. Date of Birth',
-                          _dob,
-                          () => _selectDate(context, 'dob'),
-                          res,
-                        ),
-                        SizedBox(
-                          height: res.pick(
-                            mobile: 16.0,
-                            tablet: 24.0,
-                            desktop: 32.0,
-                          ),
-                        ),
                         DropdownButtonFormField<Gender>(
                           value: _gender,
                           items: Gender.values

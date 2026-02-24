@@ -188,8 +188,9 @@ class _AuthScreenState extends State<AuthScreen> {
                       onToggleObscure: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
                       validator: (val) {
-                        if (val != _passwordController.text)
+                        if (val != _passwordController.text) {
                           return 'Passwords do not match';
+                        }
                         return null;
                       },
                     ),

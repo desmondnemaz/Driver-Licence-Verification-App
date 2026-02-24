@@ -112,8 +112,9 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
   }
 
   Widget _buildLicensePieChart(ResponsiveSize res) {
-    if (_licenseStats.isEmpty)
+    if (_licenseStats.isEmpty) {
       return _buildCard(const Center(child: Text('No data available')));
+    }
 
     // Colors for slices
     final colors = [
@@ -183,13 +184,14 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
   }
 
   Widget _buildAgeBarChart(ResponsiveSize res) {
-    if (_ageStats.values.every((v) => v == 0))
-      return _buildCard(const Center(child: Text('No data available')));
-
     final titles = _ageStats.keys.toList();
     final values = _ageStats.values.toList();
     double maxY = 0;
-    for (var v in values) if (v > maxY) maxY = v.toDouble();
+    for (var v in values) {
+      if (v > maxY) {
+        maxY = v.toDouble();
+      }
+    }
     maxY = (maxY == 0) ? 10 : maxY + 2;
 
     return _buildCard(
@@ -197,7 +199,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
           maxY: maxY,
-          barTouchData: BarTouchData(enabled: false),
+          barTouchData: const BarTouchData(enabled: false),
           titlesData: FlTitlesData(
             show: true,
             bottomTitles: AxisTitles(
@@ -251,15 +253,20 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
   }
 
   Widget _buildTrendLineChart(ResponsiveSize res) {
-    if (_registrationTrends.isEmpty)
+    if (_registrationTrends.isEmpty) {
       return _buildCard(const Center(child: Text('No data available')));
+    }
 
     final counts = _registrationTrends
         .map((e) => (e['count'] as int).toDouble())
         .toList();
     final dates = _registrationTrends.map((e) => e['date'] as String).toList();
     double maxY = 0;
-    for (var v in counts) if (v > maxY) maxY = v;
+    for (var v in counts) {
+      if (v > maxY) {
+        maxY = v;
+      }
+    }
     maxY = (maxY == 0) ? 5 : maxY + 2;
 
     return _buildCard(
@@ -299,11 +306,12 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
                 showTitles: true,
                 interval: 1,
                 getTitlesWidget: (val, meta) {
-                  if (val % 1 == 0)
+                  if (val % 1 == 0) {
                     return Text(
                       val.toInt().toString(),
                       style: const TextStyle(fontSize: 10),
                     );
+                  }
                   return const Text('');
                 },
                 reservedSize: 28,

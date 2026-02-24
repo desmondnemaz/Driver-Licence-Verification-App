@@ -251,14 +251,15 @@ class SupabaseService {
         if (dob == null) continue;
 
         final age = now.year - dob.year;
-        if (age >= 18 && age <= 25)
+        if (age >= 18 && age <= 25) {
           group18to25++;
-        else if (age >= 26 && age <= 35)
+        } else if (age >= 26 && age <= 35) {
           group26to35++;
-        else if (age >= 36 && age <= 50)
+        } else if (age >= 36 && age <= 50) {
           group36to50++;
-        else if (age >= 51)
+        } else if (age >= 51) {
           group51plus++;
+        }
       }
 
       return {
@@ -275,9 +276,8 @@ class SupabaseService {
 
   static Future<Map<String, int>> getLicenseClassStats() async {
     try {
-      final response = await client
-          .from('driver_licenses')
-          .select('license_code');
+      final response =
+          await client.from('driver_licenses').select('license_code');
       // response is List of Maps: [{'license_code': '2'}, {'license_code': '4'}]
       final List<dynamic> data = response as List<dynamic>;
 
@@ -300,9 +300,8 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getRegistrationTrends() async {
     try {
       // Get last 7 days of registrations
-      final sevenDaysAgo = DateTime.now()
-          .subtract(const Duration(days: 7))
-          .toIso8601String();
+      final sevenDaysAgo =
+          DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
 
       final response = await client
           .from('drivers')
@@ -370,6 +369,7 @@ class SupabaseService {
     required String issueDate,
     required String expiryDate,
     required List<String> codes,
+    required Gender gender,
     XFile? imageFile,
     String? currentImagePath,
     String? restrictions,
@@ -383,13 +383,11 @@ class SupabaseService {
         final fileName =
             '${idNumber}_${DateTime.now().millisecondsSinceEpoch}.$extension';
         final bytes = await imageFile.readAsBytes();
-        await client.storage
-            .from('driver-images')
-            .uploadBinary(
-              fileName,
-              bytes,
-              fileOptions: const FileOptions(upsert: true),
-            );
+        await client.storage.from('driver-images').uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(upsert: true),
+        );
         imagePath = fileName;
       }
 
@@ -403,6 +401,7 @@ class SupabaseService {
             'id_number': idNumber,
             'driver_image_path': imagePath,
             'restrictions': restrictions,
+            'gender': gender.toString().split('.').last,
           })
           .eq('id', driverId);
 
@@ -441,6 +440,7 @@ class SupabaseService {
     required String issueDate,
     required String expiryDate,
     required List<String> codes,
+    required Gender gender,
     XFile? imageFile,
     String? restrictions,
   }) async {
@@ -453,13 +453,11 @@ class SupabaseService {
         final fileName =
             '${idNumber}_${DateTime.now().millisecondsSinceEpoch}.$extension';
         final bytes = await imageFile.readAsBytes();
-        await client.storage
-            .from('driver-images')
-            .uploadBinary(
-              fileName,
-              bytes,
-              fileOptions: const FileOptions(upsert: true),
-            );
+        await client.storage.from('driver-images').uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(upsert: true),
+        );
         imagePath = fileName;
       }
 
@@ -476,6 +474,7 @@ class SupabaseService {
             'id_number': idNumber,
             'driver_image_path': imagePath,
             'restrictions': restrictions,
+            'gender': gender.toString().split('.').last,
             'registered_by': client.auth.currentUser?.id,
           })
           .select()
