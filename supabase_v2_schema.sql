@@ -36,7 +36,6 @@ create table public.drivers (
   issue_date text not null,
   expiry_date text not null,
   codes text[] not null default '{}', -- Array of codes e.g. ['B', 'C']
-  vehicle_restrictions text,
   
   -- Media
   profile_image_url text

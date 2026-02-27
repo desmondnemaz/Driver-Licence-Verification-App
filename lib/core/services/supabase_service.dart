@@ -372,7 +372,6 @@ class SupabaseService {
     required List<String> codes,
     XFile? imageFile,
     String? currentImagePath,
-    String? restrictions,
     String? gender,
   }) async {
     try {
@@ -401,7 +400,6 @@ class SupabaseService {
             'dob': _parseDate(dob),
             'id_number': idNumber,
             'driver_image_path': imagePath,
-            'restrictions': restrictions,
             'gender': gender,
           })
           .eq('id', driverId);
@@ -442,7 +440,6 @@ class SupabaseService {
     required String expiryDate,
     required List<String> codes,
     XFile? imageFile,
-    String? restrictions,
     String? gender,
   }) async {
     try {
@@ -474,7 +471,6 @@ class SupabaseService {
             'dob': _parseDate(dob), // format for PG date: YYYY-MM-DD
             'id_number': idNumber,
             'driver_image_path': imagePath,
-            'restrictions': restrictions,
             'gender': gender,
             'registered_by': client.auth.currentUser?.id,
           })

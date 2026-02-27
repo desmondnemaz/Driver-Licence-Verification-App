@@ -27,7 +27,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _nameController = TextEditingController();
   final _idController = TextEditingController();
   final _licenseController = TextEditingController();
-  final _restrictionsController = TextEditingController();
   String? _gender;
 
   DateTime? _dob;
@@ -56,7 +55,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _surnameController.text = d.surname;
       _nameController.text = d.givenNames;
       _idController.text = d.idNumber;
-      _restrictionsController.text = d.restrictions ?? '';
       _gender = d.gender;
 
       // Parse dates (assumes DD/MM/YYYY)
@@ -80,6 +78,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   DateTime? _tryParseDate(String dateStr) {
+    // 1. Try ISO format (YYYY-MM-DD) which is often returned by database
+    final isoDate = DateTime.tryParse(dateStr);
+    if (isoDate != null) return isoDate;
+
+    // 2. Try Zimbabwean format (DD/MM/YYYY)
     try {
       return DateFormat('dd/MM/yyyy').parse(dateStr);
     } catch (_) {
@@ -198,7 +201,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         codes: _selectedCategories,
         imageFile: _imageFile,
         currentImagePath: widget.existingDriver!.driverImagePath,
-        restrictions: _restrictionsController.text.toUpperCase(),
         gender: _gender,
       );
     } else {
@@ -214,7 +216,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         expiryDate: DateFormat('dd/MM/yyyy').format(_expiryDate!),
         codes: _selectedCategories,
         imageFile: _imageFile,
-        restrictions: _restrictionsController.text.toUpperCase(),
         gender: _gender,
       );
     }
@@ -378,14 +379,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 24),
-                        _buildTextField(
-                          _restrictionsController,
-                          'Vehicle Restrictions (Optional)',
-                          Icons.info_outline,
-                          res,
-                          isOptional: true,
                         ),
                         const SizedBox(height: 24),
                         _buildCategorySelector(res),

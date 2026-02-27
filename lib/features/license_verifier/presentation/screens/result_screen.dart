@@ -232,8 +232,6 @@ class _ResultScreenState extends State<ResultScreen> {
                     _dataRow('3. DOB', driver?.dob ?? '---', res),
                     _dataRow('4d ID No', driver?.idNumber ?? '---', res),
                     _dataRow('5. License No', (driver?.licenses.isNotEmpty ?? false) ? driver!.licenses.first.licenseNumber : '---', res),
-                    if (driver?.restrictions?.isNotEmpty ?? false)
-                      _dataRow('12. Restrictions', driver!.restrictions!, res),
                   ],
                 ),
               ),

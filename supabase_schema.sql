@@ -10,7 +10,6 @@ create table public.drivers (
   issue_date text not null,
   expiry_date text not null,
   codes text[] not null default '{}',
-  vehicle_restrictions text,
   profile_image_url text
 );
 

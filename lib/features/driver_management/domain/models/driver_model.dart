@@ -7,7 +7,6 @@ class Driver {
   final String dob;
   final String idNumber;
   final String? driverImagePath;
-  final String? restrictions;
   final String? gender;
   final List<DriverLicense> licenses;
   final List<DefensiveCertificate> certificates;
@@ -19,7 +18,6 @@ class Driver {
     required this.dob,
     required this.idNumber,
     this.driverImagePath,
-    this.restrictions,
     this.gender,
     this.licenses = const [],
     this.certificates = const [],
@@ -43,7 +41,6 @@ class Driver {
       dob: json['dob'] ?? '',
       idNumber: json['id_number'] ?? '',
       driverImagePath: json['driver_image_path'],
-      restrictions: json['restrictions'],
       gender: json['gender'],
       licenses: licenseList,
       certificates: certList,
@@ -57,7 +54,6 @@ class Driver {
       'dob': dob,
       'id_number': idNumber,
       'driver_image_path': driverImagePath,
-      'restrictions': restrictions,
       'gender': gender,
     };
   }
