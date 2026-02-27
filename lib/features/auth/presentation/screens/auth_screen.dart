@@ -26,8 +26,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _ecNumberController = TextEditingController();
   final _stationController = TextEditingController();
 
-  String? _gender;
-  final List<String> _genderOptions = ['Male', 'Female'];
+
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -39,8 +38,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (_isLogin) {
       final error = await SupabaseService.signIn(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
+        _emailController.text.trim().toLowerCase(),
+        _passwordController.text,
       );
       if (error != null) {
         success = false;
@@ -49,20 +48,21 @@ class _AuthScreenState extends State<AuthScreen> {
         success = true;
       }
     } else {
-      success = await SupabaseService.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      final signUpError = await SupabaseService.signUp(
+        email: _emailController.text.trim().toLowerCase(),
+        password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
         ecNumber: _ecNumberController.text.trim(),
         role: widget.role,
-        gender: _gender!,
         station: _stationController.text.trim(),
       );
-      if (success) {
+      if (signUpError == null) {
+        success = true;
         message = 'Registration successful! Wait for admin approval.';
         setState(() => _isLogin = true);
       } else {
-        message = 'Registration failed. Try again.';
+        success = false;
+        message = signUpError;
       }
     }
 
@@ -135,24 +135,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       Icons.person_outline,
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: _gender,
-                      items: _genderOptions
-                          .map(
-                            (g) => DropdownMenuItem(value: g, child: Text(g)),
-                          )
-                          .toList(),
-                      onChanged: (val) => setState(() => _gender = val),
-                      decoration: InputDecoration(
-                        labelText: 'Gender',
-                        prefixIcon: const Icon(Icons.male),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      validator: (val) => val == null ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 16),
+
                     _buildField(
                       _ecNumberController,
                       'EC Number',
@@ -166,7 +149,12 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  _buildField(_emailController, 'Email', Icons.email_outlined),
+                  _buildField(
+                    _emailController,
+                    'Email',
+                    Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                   const SizedBox(height: 16),
                   _buildField(
                     _passwordController,
@@ -231,10 +219,14 @@ class _AuthScreenState extends State<AuthScreen> {
     bool isPassword = false,
     VoidCallback? onToggleObscure,
     String? Function(String?)? validator,
+    TextInputType? keyboardType,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
+      keyboardType: keyboardType,
+      autocorrect: false,
+      enableSuggestions: false,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),

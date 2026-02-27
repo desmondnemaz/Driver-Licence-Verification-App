@@ -1,4 +1,4 @@
-enum Gender { Male, Female }
+
 
 class Driver {
   final String id;
@@ -8,7 +8,7 @@ class Driver {
   final String idNumber;
   final String? driverImagePath;
   final String? restrictions;
-  final Gender? gender;
+  final String? gender;
   final List<DriverLicense> licenses;
   final List<DefensiveCertificate> certificates;
 
@@ -36,15 +36,6 @@ class Driver {
         .map((c) => DefensiveCertificate.fromJson(c as Map<String, dynamic>))
         .toList();
 
-    Gender? gender;
-    if (json['gender'] != null) {
-      try {
-        gender = Gender.values.firstWhere(
-          (e) => e.toString().split('.').last == json['gender'],
-        );
-      } catch (_) {}
-    }
-
     return Driver(
       id: json['id'] ?? '',
       surname: json['surname'] ?? '',
@@ -53,7 +44,7 @@ class Driver {
       idNumber: json['id_number'] ?? '',
       driverImagePath: json['driver_image_path'],
       restrictions: json['restrictions'],
-      gender: gender,
+      gender: json['gender'],
       licenses: licenseList,
       certificates: certList,
     );
@@ -67,7 +58,7 @@ class Driver {
       'id_number': idNumber,
       'driver_image_path': driverImagePath,
       'restrictions': restrictions,
-      'gender': gender?.toString().split('.').last,
+      'gender': gender,
     };
   }
 }

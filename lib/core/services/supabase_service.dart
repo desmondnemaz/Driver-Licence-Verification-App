@@ -18,13 +18,12 @@ class SupabaseService {
     }
   }
 
-  static Future<bool> signUp({
+  static Future<String?> signUp({
     required String email,
     required String password,
     required String fullName,
     required String ecNumber,
     required String role,
-    required String gender,
     String? station,
     String? phoneNumber,
   }) async {
@@ -35,14 +34,13 @@ class SupabaseService {
       );
 
       final String? userId = res.user?.id;
-      if (userId == null) return false;
+      if (userId == null) return 'User identification failed';
 
       await client.from('profiles').insert({
         'id': userId,
         'ec_number': ecNumber,
         'full_name': fullName,
         'role': role,
-        'gender': gender,
         'email': email,
         'phone_number': phoneNumber,
         'station': station,
@@ -56,10 +54,13 @@ class SupabaseService {
         details: {'full_name': fullName, 'role': role, 'ec_number': ecNumber},
       );
 
-      return true;
+      return null; // Success
+    } on AuthException catch (e) {
+      debugPrint('Sign Up Auth Error: ${e.message}');
+      return e.message;
     } catch (e) {
       debugPrint('Sign Up Error: $e');
-      return false;
+      return e.toString();
     }
   }
 
@@ -369,10 +370,10 @@ class SupabaseService {
     required String issueDate,
     required String expiryDate,
     required List<String> codes,
-    required Gender gender,
     XFile? imageFile,
     String? currentImagePath,
     String? restrictions,
+    String? gender,
   }) async {
     try {
       String? imagePath = currentImagePath;
@@ -401,7 +402,7 @@ class SupabaseService {
             'id_number': idNumber,
             'driver_image_path': imagePath,
             'restrictions': restrictions,
-            'gender': gender.toString().split('.').last,
+            'gender': gender,
           })
           .eq('id', driverId);
 
@@ -440,9 +441,9 @@ class SupabaseService {
     required String issueDate,
     required String expiryDate,
     required List<String> codes,
-    required Gender gender,
     XFile? imageFile,
     String? restrictions,
+    String? gender,
   }) async {
     try {
       String? imagePath;
@@ -474,7 +475,7 @@ class SupabaseService {
             'id_number': idNumber,
             'driver_image_path': imagePath,
             'restrictions': restrictions,
-            'gender': gender.toString().split('.').last,
+            'gender': gender,
             'registered_by': client.auth.currentUser?.id,
           })
           .select()

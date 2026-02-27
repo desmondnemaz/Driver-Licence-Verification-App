@@ -28,12 +28,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _idController = TextEditingController();
   final _licenseController = TextEditingController();
   final _restrictionsController = TextEditingController();
+  String? _gender;
 
   DateTime? _dob;
   DateTime? _issueDate;
   DateTime? _expiryDate;
   XFile? _imageFile; // Change to XFile
-  Gender? _gender; // Add Gender state
+
 
   final List<String> _selectedCategories = [];
   final List<String> _availableCategories = [
@@ -56,6 +57,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _nameController.text = d.givenNames;
       _idController.text = d.idNumber;
       _restrictionsController.text = d.restrictions ?? '';
+      _gender = d.gender;
 
       // Parse dates (assumes DD/MM/YYYY)
       _dob = _tryParseDate(d.dob);
@@ -73,7 +75,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           }
         }
       }
-      _gender = d.gender; // Load existing gender
+
     }
   }
 
@@ -161,12 +163,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    if (_gender == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a gender')));
-      return;
-    }
+
 
     if (_selectedCategories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +199,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         imageFile: _imageFile,
         currentImagePath: widget.existingDriver!.driverImagePath,
         restrictions: _restrictionsController.text.toUpperCase(),
-        gender: _gender!,
+        gender: _gender,
       );
     } else {
       success = await SupabaseService.saveDriverWithLicenses(
@@ -218,7 +215,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         codes: _selectedCategories,
         imageFile: _imageFile,
         restrictions: _restrictionsController.text.toUpperCase(),
-        gender: _gender!,
+        gender: _gender,
       );
     }
 
@@ -284,6 +281,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _buildSectionTitle('Personal Information', res),
+                        _buildGenderDropdown(res),
+                        const SizedBox(height: 16),
                         _buildTextField(
                           _surnameController,
                           '1. Surname',
@@ -323,43 +322,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             desktop: 32.0,
                           ),
                         ),
-                        DropdownButtonFormField<Gender>(
-                          value: _gender,
-                          items: Gender.values
-                              .map(
-                                (g) => DropdownMenuItem(
-                                  value: g,
-                                  child: Text(g.toString().split('.').last),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) => setState(() => _gender = val),
-                          decoration: InputDecoration(
-                            labelText: '4. Gender',
-                            labelStyle: TextStyle(fontSize: res.labelFont),
-                            prefixIcon: Icon(
-                              Icons.people_outline,
-                              color: AppColors.sadcPink,
-                              size: res.icon * 0.7,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                res.borderRadius * 1.5,
-                              ),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                res.borderRadius * 1.5,
-                              ),
-                              borderSide: BorderSide(color: Colors.grey[200]!),
-                            ),
-                          ),
-                          validator: (val) =>
-                              val == null ? 'Gender required' : null,
-                        ),
+
                         SizedBox(
                           height: res.pick(
                             mobile: 16.0,
@@ -422,6 +385,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           'Vehicle Restrictions (Optional)',
                           Icons.info_outline,
                           res,
+                          isOptional: true,
                         ),
                         const SizedBox(height: 24),
                         _buildCategorySelector(res),
@@ -543,8 +507,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     TextEditingController controller,
     String label,
     IconData icon,
-    ResponsiveSize res,
-  ) {
+    ResponsiveSize res, {
+    bool isOptional = false,
+  }) {
     return TextFormField(
       controller: controller,
       style: TextStyle(fontSize: res.bodyFont),
@@ -563,7 +528,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           borderSide: BorderSide(color: Colors.grey[200]!),
         ),
       ),
-      validator: (value) => value!.isEmpty ? 'Field required' : null,
+      validator: (value) {
+        if (isOptional) return null;
+        return value!.isEmpty ? 'Field required' : null;
+      },
     );
   }
 
@@ -657,6 +625,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           }).toList(),
         ),
       ],
+    );
+  }
+
+  Widget _buildGenderDropdown(ResponsiveSize res) {
+    return DropdownButtonFormField<String>(
+      value: _gender,
+      decoration: InputDecoration(
+        labelText: 'Gender',
+        prefixIcon: Icon(Icons.people_outline, color: AppColors.sadcPink),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(res.borderRadius * 1.5),
+        ),
+      ),
+      items: ['Male', 'Female'].map((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
+      onChanged: (val) => setState(() => _gender = val),
+      validator: (val) => val == null ? 'Gender is required' : null,
     );
   }
 }
