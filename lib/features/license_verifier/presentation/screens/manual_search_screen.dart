@@ -19,16 +19,27 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   bool _isLoading = false;
 
   Future<void> _handleSearch() async {
-    if (!_formKey.currentState!.validate()) return;
+    final idText = _idController.text.trim();
+    final licenseText = _licenseController.text.trim();
+
+    if (idText.isEmpty && licenseText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter either an ID or a License number.')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
       // Strip hyphens and spaces from ID number
-      final cleanId = _idController.text.replaceAll(RegExp(r'[-\s]'), '').toUpperCase();
-      final cleanLicense = _licenseController.text.trim().toUpperCase();
+      final cleanId = idText.replaceAll(RegExp(r'[-\s]'), '').toUpperCase();
+      final cleanLicense = licenseText.toUpperCase();
 
-      final driver = await SupabaseService.getDriver(cleanId, cleanLicense);
+      final driver = await SupabaseService.getDriver(
+        cleanId.isEmpty ? null : cleanId,
+        cleanLicense.isEmpty ? null : cleanLicense,
+      );
 
       if (!mounted) return;
 
@@ -79,7 +90,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Enter details exactly as they appear on the document.',
+                    'Enter ID or License details exactly as they appear on the document.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
@@ -92,7 +103,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                   const SizedBox(height: 16),
                   _buildTextField(
                     _licenseController,
-                    'License Number (e.g. 12345)',
+                    'Licence / License Number (e.g. 12345)',
                     Icons.numbers_rounded,
                   ),
                   const SizedBox(height: 32),
@@ -128,7 +139,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
         filled: true,
         fillColor: Colors.white,
       ),
-      validator: (val) => val!.isEmpty ? 'Field required' : null,
+      // No validator here anymore, handled in _handleSearch
     );
   }
 }

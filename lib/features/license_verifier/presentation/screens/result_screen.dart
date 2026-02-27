@@ -100,7 +100,13 @@ class _ResultScreenState extends State<ResultScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(res.borderRadius)),
                         ),
                       ),
-                      if (isValid && widget.driver != null && _userProfile?['role'] == 'VID_REGISTRAR') ...[
+                      if (isValid &&
+                          widget.driver != null &&
+                          _userProfile != null &&
+                          _userProfile?['is_approved'] == true &&
+                          (_userProfile?['role'] == 'VID_REGISTRAR' ||
+                              _userProfile?['role'] == 'ADMIN' ||
+                              _userProfile?['role'] == 'SYSTEM_ADMIN')) ...[
                         const SizedBox(height: 16),
                         OutlinedButton.icon(
                           onPressed: () async {

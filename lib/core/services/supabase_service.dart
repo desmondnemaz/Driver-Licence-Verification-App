@@ -150,19 +150,21 @@ class SupabaseService {
   }
 
   static Future<Driver?> getDriver(
-    String idNumber,
+    String? idNumber,
     String? licenseNumber,
   ) async {
     try {
-      // 1. Try by ID Number join with licenses and certificates
-      final dataById = await client
-          .from('drivers')
-          .select('*, driver_licenses(*), defensive_certificates(*)')
-          .eq('id_number', idNumber)
-          .maybeSingle();
+      // 1. Try by ID Number if provided
+      if (idNumber != null && idNumber.isNotEmpty) {
+        final dataById = await client
+            .from('drivers')
+            .select('*, driver_licenses(*), defensive_certificates(*)')
+            .eq('id_number', idNumber)
+            .maybeSingle();
 
-      if (dataById != null) {
-        return Driver.fromJson(dataById);
+        if (dataById != null) {
+          return Driver.fromJson(dataById);
+        }
       }
 
       // 2. If provided, try by License Number

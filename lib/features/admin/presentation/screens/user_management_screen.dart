@@ -405,7 +405,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ),
                     DropdownMenuItem(value: 'MOH_OFFICER', child: Text('MOH')),
                   ],
-                  onChanged: (newRole) => _updateRole(id, newRole),
+                  onChanged:
+                      id == SupabaseService.client.auth.currentUser?.id
+                          ? null
+                          : (newRole) => _updateRole(id, newRole),
                 ),
                 const Spacer(),
                 TextButton(
