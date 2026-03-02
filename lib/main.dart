@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'test_fingerprint_page.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -36,7 +37,8 @@ class DriverVerifierApp extends StatelessWidget {
       theme: sadcLicenseTheme.copyWith(
         textTheme: GoogleFonts.interTextTheme(sadcLicenseTheme.textTheme),
       ),
-      home: const RoleSelectionScreen(),
+      //home: const RoleSelectionScreen(),
+      home: const FingerprintTestPage(),
       debugShowCheckedModeBanner: false,
     );
   }
