@@ -9,6 +9,8 @@ import 'package:driver_license_verifier_app/features/license_verifier/presentati
 import 'package:driver_license_verifier_app/core/services/supabase_service.dart';
 
 import 'package:driver_license_verifier_app/features/license_verifier/presentation/screens/manual_search_screen.dart';
+import 'package:driver_license_verifier_app/core/services/fingerprint_service.dart';
+// import 'dart:typed_data';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -28,6 +30,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     ), // Requesting specific resolution for better clarity
   );
   bool _isScanning = true;
+  bool _isBiometricBusy = false;
+  final FingerprintService _fingerprintService = FingerprintService();
 
   @override
   void dispose() {
@@ -405,6 +409,27 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ),
               icon: const Icon(Icons.cameraswitch_rounded, size: 28),
             ),
+            const SizedBox(width: 32),
+            IconButton.filled(
+              onPressed: _isBiometricBusy ? null : _verifyBiometrically,
+              style: IconButton.styleFrom(
+                backgroundColor: _isBiometricBusy
+                    ? Colors.grey
+                    : AppColors.sadcPink,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.all(16),
+              ),
+              icon: _isBiometricBusy
+                  ? const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.fingerprint_rounded, size: 28),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -448,5 +473,106 @@ class _ScannerScreenState extends State<ScannerScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _verifyBiometrically() async {
+    setState(() {
+      _isBiometricBusy = true;
+      _isScanning = false;
+    });
+    _controller.stop();
+
+    try {
+      // 1. Init Scanner
+      bool ok = await _fingerprintService.initializeScanner();
+      if (!ok) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to initialize scanner')),
+        );
+        _resumeScanning();
+        return;
+      }
+
+      // 2. Fetch all templates from DB
+      final allBio = await SupabaseService.getAllBiometrics();
+      if (allBio.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No biometrics enrolled in system')),
+        );
+        _resumeScanning();
+        return;
+      }
+
+      final List<String> templates = allBio.map((b) => b.templateData).toList();
+
+      // 3. Prompt user and Search
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Place finger on scanner...'),
+          duration: Duration(seconds: 5),
+        ),
+      );
+
+      final int index = await _fingerprintService.searchFinger(templates);
+
+      if (index != -1) {
+        final matchedBio = allBio[index];
+        final driver = await SupabaseService.getDriverById(matchedBio.driverId);
+
+        if (driver != null) {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ResultScreen(driver: driver, isValid: true),
+            ),
+          );
+          return;
+        }
+      }
+
+      // No match or error
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('No Match Found'),
+          content: const Text(
+            'The fingerprint does not match any registered driver.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _resumeScanning();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('Biometric Verify Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        _resumeScanning();
+      }
+    } finally {
+      if (mounted) setState(() => _isBiometricBusy = false);
+    }
+  }
+
+  void _resumeScanning() {
+    if (mounted) {
+      setState(() {
+        _isScanning = true;
+      });
+      _controller.start();
+    }
   }
 }

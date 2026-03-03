@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:driver_license_verifier_app/features/driver_management/domain/models/driver_model.dart';
+import 'package:driver_license_verifier_app/core/services/fingerprint_service.dart';
+import 'dart:typed_data';
 
 class RegistrationScreen extends StatefulWidget {
   final Driver? existingDriver;
@@ -32,8 +34,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   DateTime? _dob;
   DateTime? _issueDate;
   DateTime? _expiryDate;
-  XFile? _imageFile; // Change to XFile
+  XFile? _imageFile;
+  String? _existingImageUrl;
+  bool _isLoadingImage = false;
 
+  // Biometrics
+  final Map<String, String?> _capturedTemplates = {
+    'right_thumb': null,
+    'left_thumb': null,
+  };
+  final Map<String, Uint8List?> _capturedImages = {
+    'right_thumb': null,
+    'left_thumb': null,
+  };
+  String? _currentlyCapturingFinger; // 'right_thumb' or 'left_thumb'
+  final FingerprintService _fingerprintService = FingerprintService();
 
   final List<String> _selectedCategories = [];
   final List<String> _availableCategories = [
@@ -73,7 +88,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           }
         }
       }
+      if (d.biometrics.isNotEmpty) {
+        for (var bio in d.biometrics) {
+          _capturedTemplates[bio.fingerType] = bio.templateData;
+        }
+      }
+      _fetchExistingImage();
+    }
+  }
 
+  Future<void> _fetchExistingImage() async {
+    if (widget.existingDriver?.driverImagePath != null) {
+      setState(() => _isLoadingImage = true);
+      final url = await SupabaseService.getImageUrl(
+        widget.existingDriver!.driverImagePath,
+      );
+      if (mounted) {
+        setState(() {
+          _existingImageUrl = url;
+          _isLoadingImage = false;
+        });
+      }
     }
   }
 
@@ -166,8 +201,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-
-
     if (_selectedCategories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -202,6 +235,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         imageFile: _imageFile,
         currentImagePath: widget.existingDriver!.driverImagePath,
         gender: _gender,
+        biometrics: _capturedTemplates.entries
+            .where((e) => e.value != null)
+            .map((e) => {'finger_type': e.key, 'template_data': e.value!})
+            .toList(),
       );
     } else {
       success = await SupabaseService.saveDriverWithLicenses(
@@ -217,6 +254,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         codes: _selectedCategories,
         imageFile: _imageFile,
         gender: _gender,
+        biometrics: _capturedTemplates.entries
+            .where((e) => e.value != null)
+            .map((e) => {'finger_type': e.key, 'template_data': e.value!})
+            .toList(),
       );
     }
 
@@ -337,6 +378,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           Icons.credit_card_outlined,
                           res,
                         ),
+                        const SizedBox(height: 24),
+                        _buildFingerprintSection(res),
 
                         SizedBox(
                           height: res.pick(
@@ -454,17 +497,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ? (kIsWeb
                           ? NetworkImage(_imageFile!.path) as ImageProvider
                           : FileImage(File(_imageFile!.path)))
-                    : null,
-                child: _imageFile == null
-                    ? Icon(
-                        Icons.add_a_photo_rounded,
-                        size: res.pick(
-                          mobile: 40.0,
-                          tablet: 50.0,
-                          desktop: 60.0,
-                        ),
-                        color: AppColors.sadcPink,
-                      )
+                    : (_existingImageUrl != null
+                          ? NetworkImage(_existingImageUrl!)
+                          : null),
+                child: (_imageFile == null && _existingImageUrl == null)
+                    ? (_isLoadingImage
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Icon(
+                              Icons.add_a_photo_rounded,
+                              size: res.pick(
+                                mobile: 40.0,
+                                tablet: 50.0,
+                                desktop: 60.0,
+                              ),
+                              color: AppColors.sadcPink,
+                            ))
                     : null,
               ),
             ),
@@ -634,13 +681,160 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
       ),
       items: ['Male', 'Female'].map((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(value),
-        );
+        return DropdownMenuItem<String>(value: value, child: Text(value));
       }).toList(),
       onChanged: (val) => setState(() => _gender = val),
       validator: (val) => val == null ? 'Gender is required' : null,
     );
+  }
+
+  Widget _buildFingerprintSection(ResponsiveSize res) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Biometric Information', res),
+        _buildFingerprintRow(res, 'Right Thumb', 'right_thumb'),
+        const SizedBox(height: 12),
+        _buildFingerprintRow(res, 'Left Thumb', 'left_thumb'),
+      ],
+    );
+  }
+
+  Widget _buildFingerprintRow(
+    ResponsiveSize res,
+    String label,
+    String fingerType,
+  ) {
+    final bool isCaptured = _capturedTemplates[fingerType] != null;
+    final bool isBusy = _currentlyCapturingFinger == fingerType;
+    final Uint8List? image = _capturedImages[fingerType];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(res.borderRadius * 1.5),
+        border: Border.all(
+          color: isBusy ? AppColors.sadcPink : Colors.grey[200]!,
+          width: isBusy ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 70,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isCaptured ? AppColors.zimGreen : AppColors.sadcPink,
+                    width: 1,
+                  ),
+                ),
+                child: image != null
+                    ? Image.memory(image, fit: BoxFit.contain)
+                    : Icon(
+                        Icons.fingerprint,
+                        size: 35,
+                        color: isCaptured ? AppColors.zimGreen : Colors.white10,
+                      ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: res.bodyFont,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isCaptured ? 'Captured' : 'Not enrolled',
+                      style: TextStyle(
+                        fontSize: res.captionFont,
+                        color: isCaptured
+                            ? AppColors.zimGreen
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              isBusy
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : IconButton(
+                      onPressed: () => _captureFingerprint(fingerType),
+                      icon: Icon(
+                        isCaptured
+                            ? Icons.refresh_rounded
+                            : Icons.add_circle_outline_rounded,
+                        color: AppColors.sadcPink,
+                      ),
+                    ),
+            ],
+          ),
+          if (isBusy)
+            const Padding(
+              padding: EdgeInsets.only(top: 8.0),
+              child: Text(
+                "Place finger on scanner...",
+                style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _captureFingerprint(String fingerType) async {
+    setState(() => _currentlyCapturingFinger = fingerType);
+    try {
+      bool ok = await _fingerprintService.initializeScanner();
+      if (!ok) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to initialize scanner.')),
+        );
+        return;
+      }
+
+      final result = await _fingerprintService.enrollFinger();
+      if (result != null) {
+        setState(() {
+          _capturedTemplates[fingerType] = result['template'];
+          _capturedImages[fingerType] = result['image'];
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${fingerType.replaceAll('_', ' ')} captured!'),
+            backgroundColor: AppColors.zimGreen,
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Capture failed.')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _currentlyCapturingFinger = null);
+    }
   }
 }

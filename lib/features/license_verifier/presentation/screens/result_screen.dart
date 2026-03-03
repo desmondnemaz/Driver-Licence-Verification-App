@@ -12,11 +12,7 @@ class ResultScreen extends StatefulWidget {
   final Driver? driver;
   final bool isValid;
 
-  const ResultScreen({
-    super.key,
-    this.driver,
-    required this.isValid,
-  });
+  const ResultScreen({super.key, this.driver, required this.isValid});
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
@@ -44,12 +40,19 @@ class _ResultScreenState extends State<ResultScreen> {
   Future<void> _fetchImageUrl() async {
     if (widget.driver?.driverImagePath != null) {
       if (mounted) setState(() => _isLoadingImage = true);
-      final url = await SupabaseService.getImageUrl(widget.driver!.driverImagePath);
-      if (mounted) {
-        setState(() {
-          _imageUrl = url;
-          _isLoadingImage = false;
-        });
+      try {
+        final url = await SupabaseService.getImageUrl(
+          widget.driver!.driverImagePath,
+        );
+        if (mounted) {
+          setState(() {
+            _imageUrl = url;
+            _isLoadingImage = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error in ResultScreen _fetchImageUrl: $e');
+        if (mounted) setState(() => _isLoadingImage = false);
       }
     }
   }
@@ -58,11 +61,16 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget build(BuildContext context) {
     final res = ResponsiveSize(context);
     final isValid = widget.isValid;
-    
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Verification Result', style: TextStyle(fontSize: res.pick(mobile: 18.0, tablet: 22.0, desktop: 26.0))),
+        title: Text(
+          'Verification Result',
+          style: TextStyle(
+            fontSize: res.pick(mobile: 18.0, tablet: 22.0, desktop: 26.0),
+          ),
+        ),
         backgroundColor: isValid ? AppColors.zimGreen : AppColors.sadcPink,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -74,7 +82,9 @@ class _ResultScreenState extends State<ResultScreen> {
           children: [
             _buildStatusHeader(res),
             Padding(
-              padding: EdgeInsets.all(res.pick(mobile: 16.0, tablet: 24.0, desktop: 32.0)),
+              padding: EdgeInsets.all(
+                res.pick(mobile: 16.0, tablet: 24.0, desktop: 32.0),
+              ),
               child: Center(
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 800),
@@ -82,9 +92,13 @@ class _ResultScreenState extends State<ResultScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _buildLicenseCard(res),
-                      if (widget.driver != null && widget.driver!.certificates.isNotEmpty) ...[
+                      if (widget.driver != null &&
+                          widget.driver!.certificates.isNotEmpty) ...[
                         const SizedBox(height: 24),
-                        _buildDefensiveCertificateCard(res, widget.driver!.certificates.first),
+                        _buildDefensiveCertificateCard(
+                          res,
+                          widget.driver!.certificates.first,
+                        ),
                       ],
                       const SizedBox(height: 24),
                       _buildExtractionDetail(res),
@@ -92,12 +106,21 @@ class _ResultScreenState extends State<ResultScreen> {
                       ElevatedButton.icon(
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.qr_code_scanner_rounded),
-                        label: Text('Scan New Document', style: TextStyle(fontSize: res.bodyFont)),
+                        label: Text(
+                          'Scan New Document',
+                          style: TextStyle(fontSize: res.bodyFont),
+                        ),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          backgroundColor: isValid ? AppColors.zimGreen : AppColors.sadcPink,
+                          backgroundColor: isValid
+                              ? AppColors.zimGreen
+                              : AppColors.sadcPink,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(res.borderRadius)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              res.borderRadius,
+                            ),
+                          ),
                         ),
                       ),
                       if (isValid &&
@@ -113,19 +136,26 @@ class _ResultScreenState extends State<ResultScreen> {
                             final updated = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => RegistrationScreen(existingDriver: widget.driver),
+                                builder: (context) => RegistrationScreen(
+                                  existingDriver: widget.driver,
+                                ),
                               ),
                             );
                             if (updated == true) {
                               if (!context.mounted) return;
-                              Navigator.pop(context); // Go back to scanner to refresh data
+                              Navigator.pop(
+                                context,
+                              ); // Go back to scanner to refresh data
                             }
                           },
                           icon: const Icon(Icons.edit_document),
                           label: const Text('Edit Driver Data'),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 18),
-                            side: const BorderSide(color: AppColors.zimGreen, width: 2),
+                            side: const BorderSide(
+                              color: AppColors.zimGreen,
+                              width: 2,
+                            ),
                             foregroundColor: AppColors.zimGreen,
                           ),
                         ),
@@ -145,7 +175,9 @@ class _ResultScreenState extends State<ResultScreen> {
     final isValid = widget.isValid;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: res.pick(mobile: 24, tablet: 32, desktop: 40)),
+      padding: EdgeInsets.symmetric(
+        vertical: res.pick(mobile: 24, tablet: 32, desktop: 40),
+      ),
       decoration: BoxDecoration(
         color: isValid ? AppColors.zimGreen : AppColors.sadcPink,
         borderRadius: const BorderRadius.only(
@@ -156,7 +188,9 @@ class _ResultScreenState extends State<ResultScreen> {
       child: Column(
         children: [
           Icon(
-            isValid ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded,
+            isValid
+                ? Icons.check_circle_outline_rounded
+                : Icons.error_outline_rounded,
             size: res.pick(mobile: 60.0, tablet: 80.0, desktop: 100.0),
             color: Colors.white,
           ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
@@ -170,8 +204,13 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
           ).animate().fadeIn(delay: 200.ms),
           Text(
-            isValid ? 'Document matches database record' : 'Warning: Manual check required',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: res.bodyFont),
+            isValid
+                ? 'Document matches database record'
+                : 'Warning: Manual check required',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: res.bodyFont,
+            ),
           ).animate().fadeIn(delay: 400.ms),
         ],
       ),
@@ -181,7 +220,9 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget _buildLicenseCard(ResponsiveSize res) {
     final driver = widget.driver;
     return Container(
-      padding: EdgeInsets.all(res.pick(mobile: 16.0, tablet: 24.0, desktop: 32.0)),
+      padding: EdgeInsets.all(
+        res.pick(mobile: 16.0, tablet: 24.0, desktop: 32.0),
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(res.borderRadius * 1.5),
@@ -202,7 +243,11 @@ class _ResultScreenState extends State<ResultScreen> {
             children: [
               Text(
                 'DRIVING LICENCE',
-                style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2, fontSize: res.pick(mobile: 14.0, tablet: 16.0, desktop: 20.0)),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  fontSize: res.pick(mobile: 14.0, tablet: 16.0, desktop: 20.0),
+                ),
               ),
               Image.network(
                 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Flag_of_Zimbabwe.svg/2000px-Flag_of_Zimbabwe.svg.png',
@@ -222,11 +267,19 @@ class _ResultScreenState extends State<ResultScreen> {
                   borderRadius: BorderRadius.circular(res.borderRadius),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: _isLoadingImage 
-                  ? const Center(child: CircularProgressIndicator())
-                  : _imageUrl != null 
+                child: _isLoadingImage
+                    ? const Center(child: CircularProgressIndicator())
+                    : _imageUrl != null
                     ? Image.network(_imageUrl!, fit: BoxFit.cover)
-                    : Icon(Icons.person, size: res.pick(mobile: 40.0, tablet: 60.0, desktop: 80.0), color: Colors.grey[400]),
+                    : Icon(
+                        Icons.person,
+                        size: res.pick(
+                          mobile: 40.0,
+                          tablet: 60.0,
+                          desktop: 80.0,
+                        ),
+                        color: Colors.grey[400],
+                      ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -237,7 +290,13 @@ class _ResultScreenState extends State<ResultScreen> {
                     _dataRow('2. Name(s)', driver?.givenNames ?? '---', res),
                     _dataRow('3. DOB', driver?.dob ?? '---', res),
                     _dataRow('4d ID No', driver?.idNumber ?? '---', res),
-                    _dataRow('5. License No', (driver?.licenses.isNotEmpty ?? false) ? driver!.licenses.first.licenseNumber : '---', res),
+                    _dataRow(
+                      '5. License No',
+                      (driver?.licenses.isNotEmpty ?? false)
+                          ? driver!.licenses.first.licenseNumber
+                          : '---',
+                      res,
+                    ),
                   ],
                 ),
               ),
@@ -248,16 +307,21 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  Widget _buildDefensiveCertificateCard(ResponsiveSize res, DefensiveCertificate cert) {
+  Widget _buildDefensiveCertificateCard(
+    ResponsiveSize res,
+    DefensiveCertificate cert,
+  ) {
     // Determine validity
     bool isValid = false;
     final now = DateTime.now();
     try {
       DateTime? expiry = DateTime.tryParse(cert.expiryDate);
       if (expiry == null) {
-        try { expiry = DateFormat('dd/MM/yyyy').parse(cert.expiryDate); } catch(_) {}
+        try {
+          expiry = DateFormat('dd/MM/yyyy').parse(cert.expiryDate);
+        } catch (_) {}
       }
-      
+
       if (expiry != null) {
         final today = DateTime(now.year, now.month, now.day);
         if (expiry.compareTo(today) >= 0) {
@@ -269,9 +333,15 @@ class _ResultScreenState extends State<ResultScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (isValid ? AppColors.zimGreen : AppColors.sadcPink).withValues(alpha: 0.05),
+        color: (isValid ? AppColors.zimGreen : AppColors.sadcPink).withValues(
+          alpha: 0.05,
+        ),
         borderRadius: BorderRadius.circular(res.borderRadius),
-        border: Border.all(color: (isValid ? AppColors.zimGreen : AppColors.sadcPink).withValues(alpha: 0.3)),
+        border: Border.all(
+          color: (isValid ? AppColors.zimGreen : AppColors.sadcPink).withValues(
+            alpha: 0.3,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -281,7 +351,11 @@ class _ResultScreenState extends State<ResultScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.verified_user_rounded, color: isValid ? AppColors.zimGreen : AppColors.sadcPink, size: 24),
+                  Icon(
+                    Icons.verified_user_rounded,
+                    color: isValid ? AppColors.zimGreen : AppColors.sadcPink,
+                    size: 24,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     'DEFENSIVE DRIVING (TSCZ)',
@@ -301,7 +375,11 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
                 child: Text(
                   isValid ? 'VALID' : 'EXPIRED',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
@@ -311,31 +389,65 @@ class _ResultScreenState extends State<ResultScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start, // Align to top
             children: [
-              Expanded( // Use expanded to avoid overflow
+              Expanded(
+                // Use expanded to avoid overflow
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Certificate No:', style: TextStyle(fontSize: res.captionFont, color: AppColors.textSecondary)),
-                    Text(cert.certificateNumber, style: TextStyle(fontWeight: FontWeight.bold, fontSize: res.bodyFont)),
+                    Text(
+                      'Certificate No:',
+                      style: TextStyle(
+                        fontSize: res.captionFont,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      cert.certificateNumber,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: res.bodyFont,
+                      ),
+                    ),
                     const SizedBox(height: 8), // Gap
-                    Text('Issue Date:', style: TextStyle(fontSize: res.captionFont, color: AppColors.textSecondary)),
-                    Text(cert.issueDate, style: TextStyle(fontWeight: FontWeight.bold, fontSize: res.bodyFont)),
+                    Text(
+                      'Issue Date:',
+                      style: TextStyle(
+                        fontSize: res.captionFont,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      cert.issueDate,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: res.bodyFont,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Expanded( // Use expanded
+              Expanded(
+                // Use expanded
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                     // Empty spacer or maybe Status text if needed, but we have the chip now.
-                     // Let's put Expiry here.
-                    Text('Expiry Date:', style: TextStyle(fontSize: res.captionFont, color: AppColors.textSecondary)),
+                    // Empty spacer or maybe Status text if needed, but we have the chip now.
+                    // Let's put Expiry here.
                     Text(
-                      cert.expiryDate, 
+                      'Expiry Date:',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold, 
+                        fontSize: res.captionFont,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      cert.expiryDate,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
                         fontSize: res.bodyFont,
-                        color: isValid ? AppColors.zimGreen : AppColors.sadcPink,
+                        color: isValid
+                            ? AppColors.zimGreen
+                            : AppColors.sadcPink,
                       ),
                     ),
                   ],
@@ -354,8 +466,22 @@ class _ResultScreenState extends State<ResultScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: res.captionFont, color: AppColors.textSecondary, fontWeight: FontWeight.normal)),
-          Text(value, style: TextStyle(fontSize: res.bodyFont, fontWeight: FontWeight.bold, color: AppColors.textMain)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: res.captionFont,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: res.bodyFont,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textMain,
+            ),
+          ),
         ],
       ),
     );
@@ -369,7 +495,11 @@ class _ResultScreenState extends State<ResultScreen> {
       children: [
         Text(
           'Security Analysis',
-          style: TextStyle(fontSize: res.pick(mobile: 18.0, tablet: 20.0, desktop: 24.0), fontWeight: FontWeight.bold, color: AppColors.textMain),
+          style: TextStyle(
+            fontSize: res.pick(mobile: 18.0, tablet: 20.0, desktop: 24.0),
+            fontWeight: FontWeight.bold,
+            color: AppColors.textMain,
+          ),
         ),
         const SizedBox(height: 12),
         Container(
@@ -382,23 +512,50 @@ class _ResultScreenState extends State<ResultScreen> {
             children: [
               if (isValid && driver != null) ...[
                 _logRow('DB Match', 'SUCCESS', Icons.storage_rounded, res),
-                _logRow('Codes', driver.licenses.map((l) => l.licenseCode).join(', '), Icons.category_outlined, res),
-                _logRow('Sync Status', 'ONLINE (SUPABASE)', Icons.cloud_done_rounded, res),
+                _logRow(
+                  'Codes',
+                  driver.licenses.map((l) => l.licenseCode).join(', '),
+                  Icons.category_outlined,
+                  res,
+                ),
+                _logRow(
+                  'Sync Status',
+                  'ONLINE (SUPABASE)',
+                  Icons.cloud_done_rounded,
+                  res,
+                ),
                 if (driver.certificates.isNotEmpty) ...[
                   const Divider(),
                   const SizedBox(height: 8),
-                  Text('Defensive Driving (TSCZ)', style: TextStyle(fontSize: res.captionFont, fontWeight: FontWeight.bold, color: AppColors.sadcPink)),
+                  Text(
+                    'Defensive Driving (TSCZ)',
+                    style: TextStyle(
+                      fontSize: res.captionFont,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.sadcPink,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   _logRow(
-                    'Cert #${driver.certificates.first.certificateNumber}', 
-                    'Expires: ${driver.certificates.first.expiryDate}', 
-                    Icons.verified_rounded, 
-                    res
+                    'Cert #${driver.certificates.first.certificateNumber}',
+                    'Expires: ${driver.certificates.first.expiryDate}',
+                    Icons.verified_rounded,
+                    res,
                   ),
                 ],
               ] else ...[
-                _logRow('DB Match', 'NOT FOUND', Icons.error_outline_rounded, res),
-                _logRow('Alert Code', 'VER-404', Icons.warning_amber_rounded, res),
+                _logRow(
+                  'DB Match',
+                  'NOT FOUND',
+                  Icons.error_outline_rounded,
+                  res,
+                ),
+                _logRow(
+                  'Alert Code',
+                  'VER-404',
+                  Icons.warning_amber_rounded,
+                  res,
+                ),
                 _logRow('Sync Status', 'ONLINE', Icons.cloud_done_rounded, res),
               ],
             ],
@@ -408,16 +565,34 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  Widget _logRow(String label, String value, IconData icon, ResponsiveSize res) {
+  Widget _logRow(
+    String label,
+    String value,
+    IconData icon,
+    ResponsiveSize res,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Icon(icon, size: res.icon * 0.7, color: AppColors.textSecondary),
           const SizedBox(width: 12),
-          Text(label, style: TextStyle(fontSize: res.labelFont, color: AppColors.textSecondary)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: res.labelFont,
+              color: AppColors.textSecondary,
+            ),
+          ),
           const Spacer(),
-          Text(value, style: TextStyle(fontSize: res.bodyFont, fontWeight: FontWeight.bold, color: AppColors.textMain)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: res.bodyFont,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textMain,
+            ),
+          ),
         ],
       ),
     );

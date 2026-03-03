@@ -1,5 +1,3 @@
-
-
 class Driver {
   final String id;
   final String surname;
@@ -10,6 +8,7 @@ class Driver {
   final String? gender;
   final List<DriverLicense> licenses;
   final List<DefensiveCertificate> certificates;
+  final List<DriverBiometric> biometrics;
 
   Driver({
     required this.id,
@@ -21,6 +20,7 @@ class Driver {
     this.gender,
     this.licenses = const [],
     this.certificates = const [],
+    this.biometrics = const [],
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -34,6 +34,11 @@ class Driver {
         .map((c) => DefensiveCertificate.fromJson(c as Map<String, dynamic>))
         .toList();
 
+    var biometricData = json['driver_biometrics'] as List? ?? [];
+    List<DriverBiometric> biometricList = biometricData
+        .map((b) => DriverBiometric.fromJson(b as Map<String, dynamic>))
+        .toList();
+
     return Driver(
       id: json['id'] ?? '',
       surname: json['surname'] ?? '',
@@ -44,6 +49,7 @@ class Driver {
       gender: json['gender'],
       licenses: licenseList,
       certificates: certList,
+      biometrics: biometricList,
     );
   }
 
@@ -59,7 +65,39 @@ class Driver {
   }
 }
 
+class DriverBiometric {
+  final int? id;
+  final String driverId;
+  final String fingerType; // 'right_thumb' or 'left_thumb'
+  final String templateData;
+
+  DriverBiometric({
+    this.id,
+    required this.driverId,
+    required this.fingerType,
+    required this.templateData,
+  });
+
+  factory DriverBiometric.fromJson(Map<String, dynamic> json) {
+    return DriverBiometric(
+      id: json['id'],
+      driverId: json['driver_id'] ?? '',
+      fingerType: json['finger_type'] ?? '',
+      templateData: json['template_data'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'driver_id': driverId,
+      'finger_type': fingerType,
+      'template_data': templateData,
+    };
+  }
+}
+
 class DefensiveCertificate {
+  // ... existing code ...
   final String certificateNumber;
   final String issueDate;
   final String expiryDate;

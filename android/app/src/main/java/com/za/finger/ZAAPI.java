@@ -799,8 +799,13 @@ public class ZAAPI {
 		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
 			permissionIntent = PendingIntent.getBroadcast(env, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_MUTABLE);//FLAG_IMMUTABLE
 			}else{
-			permissionIntent = PendingIntent.getBroadcast(env, 0, new Intent(ACTION_USB_PERMISSION), 0);
-		}
+			int flags = PendingIntent.FLAG_IMMUTABLE;
+permissionIntent = PendingIntent.getBroadcast(
+    env,
+    0,
+    new Intent(ACTION_USB_PERMISSION),
+    flags
+);}
 //		permissionIntent = PendingIntent.getBroadcast(env, 0, new Intent(ACTION_USB_PERMISSION), 0);
 		IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
 		env.registerReceiver(mUsbReceiver, filter);

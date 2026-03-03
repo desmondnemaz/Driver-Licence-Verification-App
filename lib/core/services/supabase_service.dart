@@ -140,11 +140,44 @@ class SupabaseService {
   static Future<String?> getImageUrl(String? path) async {
     if (path == null) return null;
     try {
-      return await client.storage
+      debugPrint(
+        'Fetching signed URL for path: $path from bucket: driver-images',
+      );
+      final url = await client.storage
           .from('driver-images')
           .createSignedUrl(path, 3600); // 1 hour link
+      debugPrint('Successfully generated signed URL: $url');
+      return url;
     } catch (e) {
-      debugPrint('Error getting image URL: $e');
+      debugPrint('Error getting image URL for path $path: $e');
+      return null;
+    }
+  }
+
+  static Future<List<DriverBiometric>> getAllBiometrics() async {
+    try {
+      final data = await client.from('driver_biometrics').select('*');
+      return (data as List).map((b) => DriverBiometric.fromJson(b)).toList();
+    } catch (e) {
+      debugPrint('Error fetching all biometrics: $e');
+      return [];
+    }
+  }
+
+  static Future<Driver?> getDriverById(String driverId) async {
+    try {
+      final data = await client
+          .from('drivers')
+          .select(
+            '*, driver_licenses(*), defensive_certificates(*), driver_biometrics(*)',
+          )
+          .eq('id', driverId)
+          .maybeSingle();
+
+      if (data == null) return null;
+      return Driver.fromJson(data);
+    } catch (e) {
+      debugPrint('Error fetching driver by ID: $e');
       return null;
     }
   }
@@ -158,7 +191,9 @@ class SupabaseService {
       if (idNumber != null && idNumber.isNotEmpty) {
         final dataById = await client
             .from('drivers')
-            .select('*, driver_licenses(*), defensive_certificates(*)')
+            .select(
+              '*, driver_licenses(*), defensive_certificates(*), driver_biometrics(*)',
+            )
             .eq('id_number', idNumber)
             .maybeSingle();
 
@@ -172,7 +207,7 @@ class SupabaseService {
         final licenseData = await client
             .from('driver_licenses')
             .select(
-              '*, drivers(*, driver_licenses(*), defensive_certificates(*))',
+              '*, drivers(*, driver_licenses(*), defensive_certificates(*), driver_biometrics(*))',
             )
             .eq('license_number', licenseNumber)
             .maybeSingle();
@@ -279,8 +314,9 @@ class SupabaseService {
 
   static Future<Map<String, int>> getLicenseClassStats() async {
     try {
-      final response =
-          await client.from('driver_licenses').select('license_code');
+      final response = await client
+          .from('driver_licenses')
+          .select('license_code');
       // response is List of Maps: [{'license_code': '2'}, {'license_code': '4'}]
       final List<dynamic> data = response as List<dynamic>;
 
@@ -303,8 +339,9 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getRegistrationTrends() async {
     try {
       // Get last 7 days of registrations
-      final sevenDaysAgo =
-          DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+      final sevenDaysAgo = DateTime.now()
+          .subtract(const Duration(days: 7))
+          .toIso8601String();
 
       final response = await client
           .from('drivers')
@@ -375,6 +412,8 @@ class SupabaseService {
     XFile? imageFile,
     String? currentImagePath,
     String? gender,
+    List<Map<String, String>>?
+    biometrics, // [{finger_type: '...', template_data: '...'}]
   }) async {
     try {
       String? imagePath = currentImagePath;
@@ -385,11 +424,13 @@ class SupabaseService {
         final fileName =
             '${idNumber}_${DateTime.now().millisecondsSinceEpoch}.$extension';
         final bytes = await imageFile.readAsBytes();
-        await client.storage.from('driver-images').uploadBinary(
-          fileName,
-          bytes,
-          fileOptions: const FileOptions(upsert: true),
-        );
+        await client.storage
+            .from('driver-images')
+            .uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const FileOptions(upsert: true),
+            );
         imagePath = fileName;
       }
 
@@ -425,6 +466,28 @@ class SupabaseService {
 
       await client.from('driver_licenses').insert(licenseInserts);
 
+      // 4. Update Biometrics
+      if (biometrics != null && biometrics.isNotEmpty) {
+        // Simple strategy: delete and re-insert or use upsert if we have IDs.
+        // Given the unique constraint (driver_id, finger_type), we can upsert or delete-insert.
+        await client
+            .from('driver_biometrics')
+            .delete()
+            .eq('driver_id', driverId);
+
+        final bioInserts = biometrics
+            .map(
+              (b) => {
+                'driver_id': driverId,
+                'finger_type': b['finger_type'],
+                'template_data': b['template_data'],
+              },
+            )
+            .toList();
+
+        await client.from('driver_biometrics').insert(bioInserts);
+      }
+
       return true;
     } catch (e) {
       debugPrint('Supabase Update Error: $e');
@@ -443,6 +506,7 @@ class SupabaseService {
     required List<String> codes,
     XFile? imageFile,
     String? gender,
+    List<Map<String, String>>? biometrics,
   }) async {
     try {
       String? imagePath;
@@ -453,11 +517,13 @@ class SupabaseService {
         final fileName =
             '${idNumber}_${DateTime.now().millisecondsSinceEpoch}.$extension';
         final bytes = await imageFile.readAsBytes();
-        await client.storage.from('driver-images').uploadBinary(
-          fileName,
-          bytes,
-          fileOptions: const FileOptions(upsert: true),
-        );
+        await client.storage
+            .from('driver-images')
+            .uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const FileOptions(upsert: true),
+            );
         imagePath = fileName;
       }
 
@@ -536,7 +602,9 @@ class SupabaseService {
 
       var builder = client
           .from('drivers')
-          .select('*, $licenseSelect, defensive_certificates(*)');
+          .select(
+            '*, $licenseSelect, defensive_certificates(*), driver_biometrics(*)',
+          );
 
       if (query != null && query.isNotEmpty) {
         builder = builder.or(

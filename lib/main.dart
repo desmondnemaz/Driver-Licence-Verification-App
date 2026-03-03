@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'test_fingerprint_page.dart';
+// import 'test_fingerprint_page.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -18,12 +18,12 @@ import 'package:driver_license_verifier_app/features/tscz/presentation/screens/t
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
-  
+
   runApp(const DriverVerifierApp());
 }
 
@@ -37,14 +37,12 @@ class DriverVerifierApp extends StatelessWidget {
       theme: sadcLicenseTheme.copyWith(
         textTheme: GoogleFonts.interTextTheme(sadcLicenseTheme.textTheme),
       ),
-      //home: const RoleSelectionScreen(),
-      home: const FingerprintTestPage(),
+      home: const RoleSelectionScreen(),
+      // home: const FingerprintTestPage(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
-
-
 
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -80,16 +78,16 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       setState(() {
         _profile = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logged out successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Logged out successfully')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final res = ResponsiveSize(context);
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -105,7 +103,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              if (_profile != null) 
+              if (_profile != null)
                 Align(
                   alignment: Alignment.topRight,
                   child: Padding(
@@ -116,16 +114,32 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(_profile!['full_name'] ?? 'Staff', 
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text(_profile!['role']?.toString().replaceAll('_', ' ') ?? '', 
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            Text(
+                              _profile!['full_name'] ?? 'Staff',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              _profile!['role']?.toString().replaceAll(
+                                    '_',
+                                    ' ',
+                                  ) ??
+                                  '',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(width: 12),
                         IconButton.filled(
                           onPressed: _logout,
-                          style: IconButton.styleFrom(backgroundColor: AppColors.sadcPink),
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppColors.sadcPink,
+                          ),
                           icon: const Icon(Icons.logout_rounded, size: 20),
                         ),
                       ],
@@ -136,88 +150,124 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: res.pick(mobile: 24.0, tablet: 48.0, desktop: 60.0),
+                      horizontal: res.pick(
+                        mobile: 24.0,
+                        tablet: 48.0,
+                        desktop: 60.0,
+                      ),
                       vertical: 24.0,
                     ),
-                    child: res.isDesktop 
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Left Side: Branding
-                            Expanded(
-                              flex: 1,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.verified_user_rounded,
-                                    size: 120,
-                                    color: AppColors.sadcPink,
-                                  ).animate().scale(delay: 200.ms, duration: 600.ms, curve: Curves.easeOutBack),
-                                  const SizedBox(height: 40),
-                                  Text(
-                                    'Zimbabwe Driver License\nVerification System',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textMain,
+                    child: res.isDesktop
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left Side: Branding
+                              Expanded(
+                                flex: 1,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.verified_user_rounded,
+                                      size: 120,
+                                      color: AppColors.sadcPink,
+                                    ).animate().scale(
+                                      delay: 200.ms,
+                                      duration: 600.ms,
+                                      curve: Curves.easeOutBack,
                                     ),
-                                  ).animate().fadeIn(delay: 400.ms),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Select your role to access the registration, roadside verification, or administration dashboard.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ).animate().fadeIn(delay: 600.ms),
-                                ],
+                                    const SizedBox(height: 40),
+                                    Text(
+                                      'Zimbabwe Driver License\nVerification System',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textMain,
+                                      ),
+                                    ).animate().fadeIn(delay: 400.ms),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'Select your role to access the registration, roadside verification, or administration dashboard.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ).animate().fadeIn(delay: 600.ms),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 60),
-                            // Right Side: Cards
-                            SizedBox(
-                              width: 450,
-                              child: _buildRoleCards(context, res),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Icon(
-                              Icons.verified_user_rounded,
-                              size: res.pick(mobile: 80.0, tablet: 100.0, desktop: 120.0),
-                              color: AppColors.sadcPink,
-                            ).animate().scale(delay: 200.ms, duration: 600.ms, curve: Curves.easeOutBack),
-                            SizedBox(height: res.pick(mobile: 20.0, tablet: 32.0, desktop: 40.0)),
-                            Text(
-                              'Zimbabwe Driver License\nVerification System',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(
-                                fontSize: res.pick(mobile: 24.0, tablet: 32.0, desktop: 40.0),
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textMain,
+                              const SizedBox(width: 60),
+                              // Right Side: Cards
+                              SizedBox(
+                                width: 450,
+                                child: _buildRoleCards(context, res),
                               ),
-                            ).animate().fadeIn(delay: 400.ms),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Select your role to continue',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: res.pick(mobile: 14.0, tablet: 16.0, desktop: 18.0),
-                                color: AppColors.textSecondary,
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Icon(
+                                Icons.verified_user_rounded,
+                                size: res.pick(
+                                  mobile: 80.0,
+                                  tablet: 100.0,
+                                  desktop: 120.0,
+                                ),
+                                color: AppColors.sadcPink,
+                              ).animate().scale(
+                                delay: 200.ms,
+                                duration: 600.ms,
+                                curve: Curves.easeOutBack,
                               ),
-                            ).animate().fadeIn(delay: 600.ms),
-                            SizedBox(height: res.pick(mobile: 40.0, tablet: 60.0, desktop: 80.0)),
-                            _buildRoleCards(context, res),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
+                              SizedBox(
+                                height: res.pick(
+                                  mobile: 20.0,
+                                  tablet: 32.0,
+                                  desktop: 40.0,
+                                ),
+                              ),
+                              Text(
+                                'Zimbabwe Driver License\nVerification System',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: res.pick(
+                                    mobile: 24.0,
+                                    tablet: 32.0,
+                                    desktop: 40.0,
+                                  ),
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textMain,
+                                ),
+                              ).animate().fadeIn(delay: 400.ms),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Select your role to continue',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: res.pick(
+                                    mobile: 14.0,
+                                    tablet: 16.0,
+                                    desktop: 18.0,
+                                  ),
+                                  color: AppColors.textSecondary,
+                                ),
+                              ).animate().fadeIn(delay: 600.ms),
+                              SizedBox(
+                                height: res.pick(
+                                  mobile: 40.0,
+                                  tablet: 60.0,
+                                  desktop: 80.0,
+                                ),
+                              ),
+                              _buildRoleCards(context, res),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
                   ),
                 ),
               ),
@@ -231,8 +281,13 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   Widget _buildRoleCards(BuildContext context, ResponsiveSize res) {
     Future<void> handleProtectedNav(String role, Widget destination) async {
       // Check if already logged in with correct role and approved
-      if (_profile != null && _profile!['role'] == role && _profile!['is_approved'] == true) {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => destination));
+      if (_profile != null &&
+          _profile!['role'] == role &&
+          _profile!['is_approved'] == true) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => destination),
+        );
         return;
       }
 
@@ -243,7 +298,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       if (success == true) {
         await _checkSession(); // Refresh profile after login
         if (context.mounted) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => destination));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => destination),
+          );
         }
       }
     }
@@ -254,21 +312,24 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         subtitle: 'Driver Registration & Management',
         icon: Icons.app_registration_rounded,
         color: AppColors.sadcPink,
-        onTap: () => handleProtectedNav('VID_REGISTRAR', const VidDashboardScreen()),
+        onTap: () =>
+            handleProtectedNav('VID_REGISTRAR', const VidDashboardScreen()),
       ),
       _RoleCard(
         title: 'Police Officer',
         subtitle: 'Roadside License Verification',
         icon: Icons.local_police_rounded,
         color: AppColors.zimGreen,
-        onTap: () => handleProtectedNav('POLICE_OFFICER', const ScannerScreen()),
+        onTap: () =>
+            handleProtectedNav('POLICE_OFFICER', const ScannerScreen()),
       ),
       _RoleCard(
         title: 'TSCZ Officer',
         subtitle: 'Defensive Driving Certificates',
         icon: Icons.verified_user_rounded,
         color: Colors.orange,
-        onTap: () => handleProtectedNav('TSCZ_OFFICER', const TsczDashboardScreen()),
+        onTap: () =>
+            handleProtectedNav('TSCZ_OFFICER', const TsczDashboardScreen()),
       ),
       _RoleCard(
         title: 'System Admin',
@@ -291,10 +352,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
     if (res.isDesktop) {
       return Column(
-        children: cards.map((card) => Padding(
-          padding: const EdgeInsets.only(bottom: 20.0),
-          child: card.animate().fadeIn(delay: 800.ms).slideX(begin: 0.1),
-        )).toList(),
+        children: cards
+            .map(
+              (card) => Padding(
+                padding: const EdgeInsets.only(bottom: 20.0),
+                child: card.animate().fadeIn(delay: 800.ms).slideX(begin: 0.1),
+              ),
+            )
+            .toList(),
       );
     }
 
@@ -332,17 +397,23 @@ class _RoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final res = ResponsiveSize(context);
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(res.pick(mobile: 20.0, tablet: 24.0, desktop: 28.0)),
+        borderRadius: BorderRadius.circular(
+          res.pick(mobile: 20.0, tablet: 24.0, desktop: 28.0),
+        ),
         child: Container(
-          padding: EdgeInsets.all(res.pick(mobile: 20.0, tablet: 28.0, desktop: 32.0)),
+          padding: EdgeInsets.all(
+            res.pick(mobile: 20.0, tablet: 28.0, desktop: 32.0),
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(res.pick(mobile: 20.0, tablet: 24.0, desktop: 28.0)),
+            borderRadius: BorderRadius.circular(
+              res.pick(mobile: 20.0, tablet: 24.0, desktop: 28.0),
+            ),
             boxShadow: [
               BoxShadow(
                 color: color.withValues(alpha: 0.1),
@@ -350,22 +421,27 @@ class _RoleCard extends StatelessWidget {
                 offset: const Offset(0, 10),
               ),
             ],
-            border: Border.all(
-              color: color.withValues(alpha: 0.1),
-              width: 2,
-            ),
+            border: Border.all(color: color.withValues(alpha: 0.1), width: 2),
           ),
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(res.pick(mobile: 12.0, tablet: 16.0, desktop: 20.0)),
+                padding: EdgeInsets.all(
+                  res.pick(mobile: 12.0, tablet: 16.0, desktop: 20.0),
+                ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: res.pick(mobile: 24.0, tablet: 32.0, desktop: 40.0)),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: res.pick(mobile: 24.0, tablet: 32.0, desktop: 40.0),
+                ),
               ),
-              SizedBox(width: res.pick(mobile: 16.0, tablet: 24.0, desktop: 32.0)),
+              SizedBox(
+                width: res.pick(mobile: 16.0, tablet: 24.0, desktop: 32.0),
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,7 +449,11 @@ class _RoleCard extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: res.pick(mobile: 16.0, tablet: 18.0, desktop: 22.0),
+                        fontSize: res.pick(
+                          mobile: 16.0,
+                          tablet: 18.0,
+                          desktop: 22.0,
+                        ),
                         fontWeight: FontWeight.bold,
                         color: AppColors.textMain,
                       ),
@@ -381,14 +461,22 @@ class _RoleCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: res.pick(mobile: 12.0, tablet: 14.0, desktop: 16.0),
+                        fontSize: res.pick(
+                          mobile: 12.0,
+                          tablet: 14.0,
+                          desktop: 16.0,
+                        ),
                         color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, color: color.withValues(alpha: 0.3), size: 16),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: color.withValues(alpha: 0.3),
+                size: 16,
+              ),
             ],
           ),
         ),
