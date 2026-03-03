@@ -345,7 +345,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         color: Colors.blueAccent,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ScannerScreen()),
+          MaterialPageRoute(
+            builder: (context) => const ScannerScreen(isGuest: true),
+          ),
         ),
       ),
     ];

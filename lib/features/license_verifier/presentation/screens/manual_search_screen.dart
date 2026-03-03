@@ -4,9 +4,11 @@ import 'package:driver_license_verifier_app/theme/app_colors.dart';
 
 import 'package:driver_license_verifier_app/core/services/supabase_service.dart';
 import 'package:driver_license_verifier_app/features/license_verifier/presentation/screens/result_screen.dart';
+import 'package:driver_license_verifier_app/features/license_verifier/presentation/screens/guest_result_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
-  const ManualSearchScreen({super.key});
+  final bool isGuest;
+  const ManualSearchScreen({super.key, this.isGuest = false});
 
   @override
   State<ManualSearchScreen> createState() => _ManualSearchScreenState();
@@ -24,7 +26,9 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
 
     if (idText.isEmpty && licenseText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter either an ID or a License number.')),
+        const SnackBar(
+          content: Text('Please enter either an ID or a License number.'),
+        ),
       );
       return;
     }
@@ -47,18 +51,24 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ResultScreen(driver: driver, isValid: true),
+            builder: (context) => widget.isGuest
+                ? GuestResultScreen(driver: driver, isValid: true)
+                : ResultScreen(driver: driver, isValid: true),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No matching driver found. Please check the details.')),
+          const SnackBar(
+            content: Text(
+              'No matching driver found. Please check the details.',
+            ),
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -67,10 +77,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manual Search'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Manual Search'), centerTitle: true),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -81,12 +88,19 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.search_rounded, size: 80, color: AppColors.sadcPink),
+                  const Icon(
+                    Icons.search_rounded,
+                    size: 80,
+                    color: AppColors.sadcPink,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Verification Backup',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -118,7 +132,10 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text('Search Database', style: TextStyle(fontSize: 18)),
+                          child: const Text(
+                            'Search Database',
+                            style: TextStyle(fontSize: 18),
+                          ),
                         ),
                 ],
               ),
@@ -129,7 +146,11 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+  ) {
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
