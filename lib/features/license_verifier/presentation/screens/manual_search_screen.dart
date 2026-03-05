@@ -4,11 +4,9 @@ import 'package:driver_license_verifier_app/theme/app_colors.dart';
 
 import 'package:driver_license_verifier_app/core/services/supabase_service.dart';
 import 'package:driver_license_verifier_app/features/license_verifier/presentation/screens/result_screen.dart';
-import 'package:driver_license_verifier_app/features/license_verifier/presentation/screens/guest_result_screen.dart';
 
 class ManualSearchScreen extends StatefulWidget {
-  final bool isGuest;
-  const ManualSearchScreen({super.key, this.isGuest = false});
+  const ManualSearchScreen({super.key});
 
   @override
   State<ManualSearchScreen> createState() => _ManualSearchScreenState();
@@ -51,9 +49,7 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => widget.isGuest
-                ? GuestResultScreen(driver: driver, isValid: true)
-                : ResultScreen(driver: driver, isValid: true),
+            builder: (context) => ResultScreen(driver: driver, isValid: true),
           ),
         );
       } else {

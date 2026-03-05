@@ -10,11 +10,9 @@ import 'package:driver_license_verifier_app/core/services/supabase_service.dart'
 
 import 'package:driver_license_verifier_app/features/license_verifier/presentation/screens/manual_search_screen.dart';
 import 'package:driver_license_verifier_app/core/services/fingerprint_service.dart';
-import 'package:driver_license_verifier_app/features/license_verifier/presentation/screens/guest_result_screen.dart';
 
 class ScannerScreen extends StatefulWidget {
-  final bool isGuest;
-  const ScannerScreen({super.key, this.isGuest = false});
+  const ScannerScreen({super.key});
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -110,9 +108,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => widget.isGuest
-              ? GuestResultScreen(driver: foundDriver, isValid: true)
-              : ResultScreen(driver: foundDriver, isValid: true),
+          builder: (context) =>
+              ResultScreen(driver: foundDriver, isValid: true),
         ),
       );
     } else {
@@ -458,8 +455,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    ManualSearchScreen(isGuest: widget.isGuest),
+                builder: (context) => const ManualSearchScreen(),
               ),
             ).then((_) {
               if (mounted) _controller.start(); // Resume when returning
@@ -530,9 +526,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => widget.isGuest
-                  ? GuestResultScreen(driver: driver, isValid: true)
-                  : ResultScreen(driver: driver, isValid: true),
+              builder: (context) => ResultScreen(driver: driver, isValid: true),
             ),
           );
           return;

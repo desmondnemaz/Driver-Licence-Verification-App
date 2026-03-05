@@ -338,18 +338,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         color: AppColors.textMain,
         onTap: () => handleProtectedNav('SYSTEM_ADMIN', const AdminDashboard()),
       ),
-      _RoleCard(
-        title: 'Driver / Guest',
-        subtitle: 'Check my license & certificates',
-        icon: Icons.person_search_rounded,
-        color: Colors.blueAccent,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ScannerScreen(isGuest: true),
-          ),
-        ),
-      ),
     ];
 
     if (res.isDesktop) {
@@ -374,8 +362,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         cards[2].animate().slideY(begin: 0.2, delay: 1200.ms),
         const SizedBox(height: 16),
         cards[3].animate().slideY(begin: 0.2, delay: 1400.ms),
-        const SizedBox(height: 16),
-        cards[4].animate().slideY(begin: 0.2, delay: 1600.ms),
       ],
     );
   }
