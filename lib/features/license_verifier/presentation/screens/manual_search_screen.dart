@@ -46,6 +46,17 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
       if (!mounted) return;
 
       if (driver != null) {
+        SupabaseService.logAudit(
+          action: 'VERIFY_LICENSE',
+          targetEntityId: driver.id,
+          details: {
+            'status': 'SUCCESS',
+            'method': 'MANUAL_SEARCH',
+            'id_number': cleanId.isEmpty ? null : cleanId,
+            'license_number': cleanLicense.isEmpty ? null : cleanLicense,
+            'driver_name': '${driver.surname} ${driver.givenNames}',
+          },
+        );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -53,6 +64,15 @@ class _ManualSearchScreenState extends State<ManualSearchScreen> {
           ),
         );
       } else {
+        SupabaseService.logAudit(
+          action: 'VERIFY_LICENSE',
+          details: {
+            'status': 'NOT_FOUND',
+            'method': 'MANUAL_SEARCH',
+            'id_number': cleanId.isEmpty ? null : cleanId,
+            'license_number': cleanLicense.isEmpty ? null : cleanLicense,
+          },
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(

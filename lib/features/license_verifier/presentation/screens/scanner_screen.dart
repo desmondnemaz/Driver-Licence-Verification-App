@@ -100,6 +100,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
         targetEntityId: foundDriver.id,
         details: {
           'status': 'SUCCESS',
+          'method': 'QR_SCAN',
           'id_number': idNumber,
           'driver_name': '${foundDriver.surname} ${foundDriver.givenNames}',
         },
@@ -116,7 +117,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
       SupabaseService.logAudit(
         action: 'VERIFY_LICENSE',
         details: {
-          'status': 'FAILURE',
+          'status': 'NOT_FOUND',
+          'method': 'QR_SCAN',
           'id_number': idNumber ?? 'UNKNOWN',
           'raw_scan': rawData,
         },
@@ -522,6 +524,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
         final driver = await SupabaseService.getDriverById(matchedBio.driverId);
 
         if (driver != null) {
+          SupabaseService.logAudit(
+            action: 'VERIFY_LICENSE',
+            targetEntityId: driver.id,
+            details: {
+              'status': 'SUCCESS',
+              'method': 'BIOMETRIC',
+              'finger_type': matchedBio.fingerType,
+              'driver_name': '${driver.surname} ${driver.givenNames}',
+            },
+          );
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
@@ -533,7 +545,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
         }
       }
 
-      // No match or error
+      // No match
+      SupabaseService.logAudit(
+        action: 'VERIFY_LICENSE',
+        details: {
+          'status': 'NOT_FOUND',
+          'method': 'BIOMETRIC',
+        },
+      );
       if (!mounted) return;
       showDialog(
         context: context,
@@ -555,6 +574,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
       );
     } catch (e) {
       debugPrint('Biometric Verify Error: $e');
+      SupabaseService.logAudit(
+        action: 'VERIFY_LICENSE',
+        details: {
+          'status': 'ERROR',
+          'method': 'BIOMETRIC',
+          'error': e.toString(),
+        },
+      );
       if (mounted) {
         ScaffoldMessenger.of(
           context,

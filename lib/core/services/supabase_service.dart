@@ -225,8 +225,7 @@ class SupabaseService {
   static Future<Map<String, int>> getAdminStats() async {
     try {
       final driversRes = await client.from('drivers').count(CountOption.exact);
-      final driversCount =
-          driversRes; // In some versions count() returns int directly
+      final driversCount = driversRes;
 
       final usersRes = await client.from('profiles').count(CountOption.exact);
       final usersCount = usersRes;
@@ -240,14 +239,29 @@ class SupabaseService {
         verificationsCount = verificationsRes;
       } catch (_) {}
 
+      int alertsCount = 0;
+      try {
+        final alertsRes = await client
+            .from('audit_logs')
+            .count(CountOption.exact)
+            .eq('action', 'SCAN_ATTEMPT');
+        alertsCount = alertsRes;
+      } catch (_) {}
+
       return {
         'total_drivers': driversCount,
         'active_users': usersCount,
         'verifications': verificationsCount,
+        'alerts': alertsCount,
       };
     } catch (e) {
       debugPrint('Stats Error: $e');
-      return {'total_drivers': 0, 'active_users': 0, 'verifications': 0};
+      return {
+        'total_drivers': 0,
+        'active_users': 0,
+        'verifications': 0,
+        'alerts': 0
+      };
     }
   }
 
@@ -387,14 +401,71 @@ class SupabaseService {
     int limit = 5,
   }) async {
     try {
-      // Check if audit_logs exists by trying a simple select
       return await client
           .from('audit_logs')
           .select('*, profiles(full_name)')
           .order('created_at', ascending: false)
           .limit(limit);
     } catch (e) {
-      // If table doesn't exist or other error, return empty
+      if (e.toString().contains('PGRST200')) {
+        debugPrint('Relationship missing, falling back to simple audit log fetch.');
+        try {
+          return await client
+              .from('audit_logs')
+              .select('*')
+              .order('created_at', ascending: false)
+              .limit(limit);
+        } catch (e2) {
+          debugPrint('Fallback fetch failed: $e2');
+        }
+      }
+      debugPrint('Get Latest Audit Logs Error: $e');
+      return [];
+    }
+  }
+
+  /// Paginated audit logs with optional action-type filtering.
+  /// [actionFilter] can be 'VERIFY_LICENSE', 'REGISTER_DRIVER', etc.
+  static Future<List<Map<String, dynamic>>> getAuditLogs({
+    int limit = 30,
+    int offset = 0,
+    String? actionFilter,
+  }) async {
+    try {
+      // Build filter query first (eq must come before order/range)
+      final filterQuery = client
+          .from('audit_logs')
+          .select('*, profiles(full_name)');
+
+      if (actionFilter != null && actionFilter.isNotEmpty) {
+        return await filterQuery
+            .eq('action', actionFilter)
+            .order('created_at', ascending: false)
+            .range(offset, offset + limit - 1);
+      }
+
+      return await filterQuery
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
+    } catch (e) {
+      if (e.toString().contains('PGRST200')) {
+        debugPrint('Relationship missing, falling back to simple audit log fetch.');
+        try {
+          var fallback = client.from('audit_logs').select('*');
+          if (actionFilter != null && actionFilter.isNotEmpty) {
+            return await fallback
+                .eq('action', actionFilter)
+                .order('created_at', ascending: false)
+                .range(offset, offset + limit - 1);
+          }
+          return await fallback
+              .order('created_at', ascending: false)
+              .range(offset, offset + limit - 1);
+        } catch (e2) {
+          debugPrint('Fallback fetch failed: $e2');
+        }
+      }
+      debugPrint('Get Audit Logs Error: $e');
       return [];
     }
   }

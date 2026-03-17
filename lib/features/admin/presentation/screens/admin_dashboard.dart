@@ -23,6 +23,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     'total_drivers': 0,
     'active_users': 0,
     'verifications': 0,
+    'alerts': 0,
   };
   List<Map<String, dynamic>> _recentActivity = [];
 
@@ -35,9 +36,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _fetchDashboardData() async {
     setState(() => _isLoading = true);
     final stats = await SupabaseService.getAdminStats();
-    final activity = await SupabaseService.getLatestAuditLogs();
+    final activity = await SupabaseService.getLatestAuditLogs(limit: 10);
 
-    // Cast explicitly
     final List<Map<String, dynamic>> typedActivity =
         List<Map<String, dynamic>>.from(activity);
 
@@ -54,59 +54,146 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget build(BuildContext context) {
     final res = ResponsiveSize(context);
 
+    // Sidebar width for desktop
+    final double sidebarWidth = res.isDesktop ? 380 : 0;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           'Admin Console',
-          style: TextStyle(fontSize: res.appBarTitleFont),
+          style: GoogleFonts.outfit(
+            fontSize: res.appBarTitleFont,
+            fontWeight: FontWeight.bold,
+          ),
         ),
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.textMain,
+        elevation: 0,
         actions: [
           IconButton(
+            tooltip: 'Refresh Data',
             onPressed: _fetchDashboardData,
-            icon: Icon(Icons.refresh_rounded, size: res.icon * 0.8),
+            icon: Icon(Icons.refresh_rounded, size: res.icon * 0.6),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchDashboardData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: EdgeInsets.all(
-              res.pick(mobile: 24.0, tablet: 32.0, desktop: 48.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Main Content Area
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: EdgeInsets.all(
+                    res.pick(mobile: 16.0, tablet: 24.0, desktop: 32.0),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(res),
+                      const SizedBox(height: 24),
+                      if (_isLoading)
+                        _buildShimmerStats(res)
+                      else
+                        _buildStatsGrid(res),
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('Management & Tools', res),
+                      _buildQuickActions(context, res),
+                      const SizedBox(height: 32),
+                      // Only show Activity below if not on Desktop (where it's in sidebar)
+                      if (!res.isDesktop) ...[
+                        _buildSectionHeader('Recent System Activity', res),
+                        if (_isLoading)
+                          const Center(child: CircularProgressIndicator())
+                        else if (_recentActivity.isEmpty)
+                          _buildEmptyState(res)
+                        else
+                          _buildRecentActivityList(res),
+                      ],
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('System Health', res),
+                      _buildHealthCard(res),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildWelcome(res),
-                const SizedBox(height: 32),
-                if (_isLoading)
-                  const Center(child: LinearProgressIndicator())
-                else
-                  _buildStatsGrid(res),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Management', res),
-                _buildQuickActions(context, res),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Recent System Activity', res),
-                if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_recentActivity.isEmpty)
-                  _buildEmptyState(res)
-                else
-                  _buildRecentActivity(res),
-                const SizedBox(height: 32),
-                _buildSectionHeader('System Health', res),
-                _buildHealthCard(res),
-              ],
-            ),
-          ),
+            // Right Sidebar for Desktop
+            if (res.isDesktop)
+              Container(
+                width: sidebarWidth,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    left: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Recent Activity',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AuditLogScreen(),
+                              ),
+                            ),
+                            child: const Text('View All'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : _recentActivity.isEmpty
+                              ? _buildEmptyState(res)
+                              : ListView.builder(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  itemCount: _recentActivity.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildActivityTile(
+                                      _recentActivity[index],
+                                      res,
+                                    );
+                                  },
+                                ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildShimmerStats(ResponsiveSize res) {
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Center(child: LinearProgressIndicator()),
     );
   }
 
@@ -114,16 +201,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Container(
       padding: const EdgeInsets.all(32),
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.history_toggle_off_outlined,
             size: 48,
-            color: AppColors.textSecondary.withValues(alpha: 0.5),
+            color: AppColors.textSecondary.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
@@ -138,58 +222,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildWelcome(ResponsiveSize res) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildHeader(ResponsiveSize res) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'System Overview',
-              style: GoogleFonts.outfit(
-                fontSize: res.pick(mobile: 28.0, tablet: 32.0, desktop: 36.0),
-                fontWeight: FontWeight.bold,
-                color: AppColors.textMain,
-              ),
-            ),
-            Text(
-              'Monitoring national license activity',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: res.bodyFont,
-              ),
-            ),
-          ],
+        Text(
+          'System Overview',
+          style: GoogleFonts.outfit(
+            fontSize: res.pick(mobile: 24.0, tablet: 28.0, desktop: 32.0),
+            fontWeight: FontWeight.bold,
+            color: AppColors.textMain,
+          ),
         ),
-        TextButton.icon(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AnalyticsDashboard(),
-              ),
-            );
-          },
-          icon: Icon(
-            Icons.analytics_outlined,
-            color: AppColors.zimYellow,
-            size: res.icon * 0.8,
-          ),
-          label: Text(
-            'Analytics',
-            style: TextStyle(
-              color: AppColors.textMain,
-              fontSize: res.buttonFont,
-            ),
-          ),
-          style: TextButton.styleFrom(
-            backgroundColor: AppColors.zimYellow.withValues(alpha: 0.1),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+        Text(
+          'Monitoring national license activity and security',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: res.bodyFont,
           ),
         ),
       ],
@@ -200,31 +249,41 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: res.isDesktop ? 4 : (res.isTablet ? 2 : 2),
+      crossAxisCount: res.pick(mobile: 2, tablet: 2, desktop: 4),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: res.pick(mobile: 1.2, tablet: 1.4, desktop: 1.2),
+      childAspectRatio: res.pick(mobile: 1.4, tablet: 1.6, desktop: 1.3),
       children: [
         _statCard(
           'Total Drivers',
           '${_stats['total_drivers']}',
-          Icons.people_outline,
+          Icons.people_alt_rounded,
           AppColors.zimGreen,
+          'Active Records',
           res,
         ),
         _statCard(
           'Verifications',
           '${_stats['verifications']}',
-          Icons.verified_outlined,
+          Icons.verified_user_rounded,
           AppColors.sadcPink,
+          'Total Scans',
           res,
         ),
-        // Placeholder for now as we don't have flagged logic yet
         _statCard(
           'System Users',
           '${_stats['active_users']}',
-          Icons.admin_panel_settings_outlined,
+          Icons.admin_panel_settings_rounded,
           AppColors.zimYellow,
+          'Active Staff',
+          res,
+        ),
+        _statCard(
+          'Security Alerts',
+          '${_stats['alerts']}',
+          Icons.warning_amber_rounded,
+          AppColors.zimRed,
+          'Scan Attempts',
           res,
         ),
       ],
@@ -236,61 +295,73 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String value,
     IconData icon,
     Color color,
+    String sublabel,
     ResponsiveSize res,
   ) {
     return Container(
-      padding: EdgeInsets.all(
-        res.pick(mobile: 16.0, tablet: 20.0, desktop: 24.0),
-      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+          Positioned(
+            right: -10,
+            bottom: -10,
             child: Icon(
               icon,
-              color: color,
-              size: res.pick(mobile: 20.0, tablet: 24.0, desktop: 28.0),
+              size: 80,
+              color: color.withValues(alpha: 0.05),
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: res.pick(mobile: 20.0, tablet: 22.0, desktop: 26.0),
-                  fontWeight: FontWeight.bold,
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: res.pick(mobile: 12.0, tablet: 13.0, desktop: 14.0),
-                  color: AppColors.textSecondary,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: GoogleFonts.outfit(
+                        fontSize: res.pick(mobile: 20.0, tablet: 22.0, desktop: 24.0),
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textMain,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
-    ).animate().scale(delay: 200.ms, duration: 400.ms);
+    ).animate().scale(delay: 100.ms, duration: 400.ms, curve: Curves.easeOutBack);
   }
 
   Widget _buildSectionHeader(String title, ResponsiveSize res) {
@@ -301,213 +372,216 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: res.pick(mobile: 18.0, tablet: 20.0, desktop: 24.0),
+            style: GoogleFonts.outfit(
+              fontSize: res.pick(mobile: 18.0, tablet: 20.0, desktop: 22.0),
               fontWeight: FontWeight.bold,
             ),
           ),
-          if (title == 'Recent System Activity')
+          if (title == 'Recent System Activity' && !res.isDesktop)
             TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AuditLogScreen(),
-                  ),
-                );
-              },
-              child: Text(
-                'View All',
-                style: TextStyle(fontSize: res.buttonFont),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AuditLogScreen(),
+                ),
               ),
+              child: const Text('View All'),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildRecentActivity(ResponsiveSize res) {
+  Widget _buildRecentActivityList(ResponsiveSize res) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _recentActivity.length,
       itemBuilder: (context, index) {
-        final item = _recentActivity[index];
-        final action = item['action'] ?? 'Unknown Action';
-        final profiles = item['profiles'] as Map<String, dynamic>?;
-        final user = profiles?['full_name'] ?? 'System';
-        final time = item['created_at'] != null
-            ? timeago.format(
-                DateTime.tryParse(item['created_at']) ?? DateTime.now(),
-              )
-            : '';
-
-        // Determine status/color loosely based on action text
-        final isAlert =
-            action.toString().contains('FAIL') ||
-            action.toString().contains('DELETE');
-        final isVerify = action.toString().contains('VERIFY');
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: EdgeInsets.all(
-            res.pick(mobile: 16.0, tablet: 20.0, desktop: 24.0),
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            children: [
-              _activityIndicator(
-                isAlert ? 'alert' : (isVerify ? 'valid' : 'reg'),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      action,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: res.bodyFont,
-                      ),
-                    ),
-                    Text(
-                      'By: $user',
-                      style: TextStyle(
-                        fontSize: res.captionFont,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                time,
-                style: TextStyle(
-                  fontSize: res.captionFont,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.1);
+        return _buildActivityTile(_recentActivity[index], res);
       },
     );
   }
 
-  Widget _activityIndicator(String status) {
-    Color color = Colors.grey;
-    if (status == 'valid') color = AppColors.zimGreen;
-    if (status == 'alert') color = AppColors.zimRed;
-    if (status == 'reg') color = AppColors.sadcPink;
+  Widget _buildActivityTile(Map<String, dynamic> item, ResponsiveSize res) {
+    final action = item['action'] ?? 'Unknown';
+    final profilesData = item['profiles'];
+    Map<String, dynamic>? profiles;
+    if (profilesData is List && profilesData.isNotEmpty) {
+      profiles = profilesData[0] as Map<String, dynamic>?;
+    } else if (profilesData is Map) {
+      profiles = profilesData.cast<String, dynamic>();
+    }
+    final user = profiles?['full_name'] ?? 'System';
+    final time = item['created_at'] != null
+        ? timeago.format(
+            DateTime.tryParse(item['created_at']!)?.toLocal() ?? DateTime.now(),
+          )
+        : '';
+
+    final details = item['details'] as Map<String, dynamic>?;
+    final method = details?['method']?.toString();
+    final status = details?['status']?.toString();
+
+    IconData icon = Icons.info_outline_rounded;
+    Color color = Colors.blue;
+
+    if (action.contains('VERIFY')) {
+      icon = _iconForMethod(method);
+      color = status == 'SUCCESS' ? AppColors.zimGreen : AppColors.zimRed;
+    } else if (action.contains('REGISTER')) {
+      icon = Icons.person_add_rounded;
+      color = AppColors.sadcPink;
+    } else if (action.contains('ATTEMPT')) {
+      icon = Icons.warning_rounded;
+      color = AppColors.zimRed;
+    }
 
     return Container(
-      width: 8,
-      height: 40,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(4),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.05)),
       ),
-    );
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  action,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  'By: $user • $time',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideX(begin: 0.05);
+  }
+
+  IconData _iconForMethod(String? method) {
+    switch (method) {
+      case 'QR_SCAN': return Icons.qr_code_rounded;
+      case 'MANUAL_SEARCH': return Icons.search_rounded;
+      case 'BIOMETRIC': return Icons.fingerprint_rounded;
+      default: return Icons.verified_rounded;
+    }
   }
 
   Widget _buildQuickActions(BuildContext context, ResponsiveSize res) {
-    return Column(
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: res.pick(mobile: 2, tablet: 3, desktop: 3),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: res.pick(mobile: 1.3, tablet: 1.5, desktop: 2.0),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _actionButton(
-                context,
-                'Manage Users',
-                Icons.manage_accounts_outlined,
-                AppColors.zimGreen,
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const UserManagementScreen(),
-                  ),
-                ),
-                res,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _actionButton(
-                context,
-                'Register Driver',
-                Icons.person_add_alt_1_outlined,
-                AppColors.textMain,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RegistrationScreen(),
-                    ),
-                  );
-                },
-                res,
-              ),
-            ),
-          ],
+        _actionCard(
+          'Manage Users',
+          'Roles & Permissions',
+          Icons.manage_accounts_outlined,
+          AppColors.zimGreen,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const UserManagementScreen()),
+          ),
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _actionButton(
-                context,
-                'Analytics',
-                Icons.analytics_outlined,
-                AppColors.zimYellow,
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AnalyticsDashboard(),
-                  ),
-                ),
-                res,
-              ),
-            ),
-            const SizedBox(width: 16),
-            const Spacer(),
-          ],
+        _actionCard(
+          'Register Driver',
+          'Add New License',
+          Icons.person_add_alt_1_outlined,
+          AppColors.textMain,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const RegistrationScreen()),
+          ),
+        ),
+        _actionCard(
+          'Analytics',
+          'Detailed Statistics',
+          Icons.analytics_outlined,
+          AppColors.zimYellow,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AnalyticsDashboard()),
+          ),
         ),
       ],
     );
   }
 
-  Widget _actionButton(
-    BuildContext context,
-    String label,
+  Widget _actionCard(
+    String title,
+    String subtitle,
     IconData icon,
     Color color,
     VoidCallback onTap,
-    ResponsiveSize res,
   ) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: res.bodyFont,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textMain,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -518,57 +592,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildHealthCard(ResponsiveSize res) {
     return Container(
-      padding: EdgeInsets.all(
-        res.pick(mobile: 20.0, tablet: 24.0, desktop: 32.0),
-      ),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.textMain, AppColors.secondary],
-        ),
+        color: AppColors.textMain,
         borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textMain.withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.cloud_done_rounded,
+          const Icon(
+            Icons.dns_rounded,
             color: AppColors.zimGreen,
-            size: res.icon * 1.5,
+            size: 40,
           ),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Central Database Online',
+                const Text(
+                  'Central Database Bridge',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: res.bodyFont,
+                    fontSize: 16,
                   ),
                 ),
                 Text(
-                  'Connected to Supabase',
+                  'Encrypted connection to Supabase active',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: res.captionFont,
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.zimGreen.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
+              color: AppColors.zimGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(30),
             ),
-            child: Text(
-              'UP',
+            child: const Text(
+              'HEALTHY',
               style: TextStyle(
                 color: AppColors.zimGreen,
                 fontWeight: FontWeight.bold,
-                fontSize: res.captionFont,
+                fontSize: 12,
               ),
             ),
           ),
