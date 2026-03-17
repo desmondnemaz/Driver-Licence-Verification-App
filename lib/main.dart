@@ -297,11 +297,23 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       );
       if (success == true) {
         await _checkSession(); // Refresh profile after login
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
+        if (context.mounted && _profile != null) {
+          // Double check role matches the selected card
+          if (_profile!['role'] == role) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => destination),
+            );
+          } else {
+             final expectedRole = role.replaceAll('_', ' ');
+             final actualRole = (_profile!['role'] ?? 'UNKNOWN').toString().replaceAll('_', ' ');
+             ScaffoldMessenger.of(context).showSnackBar(
+               SnackBar(
+                 content: Text('Access Denied: You are registered as $actualRole, but trying to access $expectedRole.'),
+                 backgroundColor: Colors.red,
+               ),
+             );
+          }
         }
       }
     }

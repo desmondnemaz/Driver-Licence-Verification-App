@@ -73,7 +73,23 @@ class _AuthScreenState extends State<AuthScreen> {
       if (!mounted) return;
 
       if (profile != null && profile['is_approved'] == true) {
-        Navigator.pop(context, true); // Success
+        // Verify role matches the one selected
+        if (profile['role'] == widget.role) {
+          Navigator.pop(context, true); // Success
+        } else {
+          await SupabaseService.signOut();
+          if (!mounted) return;
+          final expectedRole = widget.role.replaceAll('_', ' ');
+          final actualRole = (profile['role'] ?? 'UNKNOWN').toString().replaceAll('_', ' ');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Access Denied: You are registered as $actualRole, but trying to log in as $expectedRole.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } else if (profile == null) {
         await SupabaseService.signOut();
         if (!mounted) return;

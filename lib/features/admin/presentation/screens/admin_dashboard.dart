@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:driver_license_verifier_app/features/admin/presentation/screens/audit_log_screen.dart';
-import 'package:driver_license_verifier_app/features/admin/presentation/screens/analytics_dashboard.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class AdminDashboard extends StatefulWidget {
@@ -518,16 +517,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           () => Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const RegistrationScreen()),
-          ),
-        ),
-        _actionCard(
-          'Analytics',
-          'Detailed Statistics',
-          Icons.analytics_outlined,
-          AppColors.zimYellow,
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AnalyticsDashboard()),
           ),
         ),
       ],
