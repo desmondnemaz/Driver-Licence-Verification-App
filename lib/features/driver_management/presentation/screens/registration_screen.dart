@@ -50,6 +50,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _currentlyCapturingFinger; // 'right_thumb' or 'left_thumb'
   final FingerprintService _fingerprintService = FingerprintService();
 
+  // Availability Check
+  bool _isIdChecked = false;
+  bool _isIdAvailable = false;
+  bool _isCheckingAvailability = false;
+  String? _availabilityMessage;
+
   final List<String> _selectedCategories = [];
   final List<String> _availableCategories = [
     'A',
@@ -59,7 +65,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     'CE',
     'D',
     'DE',
-    'G',
   ];
 
   @override
@@ -94,7 +99,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         }
       }
       _fetchExistingImage();
+      // For existing drivers, we assume the ID is already checked unless they change it
+      _isIdChecked = true;
+      _isIdAvailable = true;
     }
+
+    _idController.addListener(_onIdChanged);
+  }
+
+  void _onIdChanged() {
+    if (_isIdChecked) {
+      setState(() {
+        _isIdChecked = false;
+        _isIdAvailable = false;
+        _availabilityMessage = null;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _idController.removeListener(_onIdChanged);
+    super.dispose();
   }
 
   Future<void> _fetchExistingImage() async {
@@ -126,11 +152,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _selectDate(BuildContext context, String type) async {
+    final now = DateTime.now();
+    DateTime firstDate = DateTime(1940);
+    DateTime lastDate = DateTime(2050);
+    DateTime initialDate = now;
+
+    if (type == 'dob') {
+      lastDate = DateTime(now.year - 16, now.month, now.day);
+      if (_dob != null && _dob!.isBefore(lastDate)) {
+        initialDate = _dob!;
+      } else {
+        initialDate = lastDate;
+      }
+    } else if (type == 'issue') {
+      if (_issueDate != null) initialDate = _issueDate!;
+    } else if (type == 'expiry') {
+      if (_expiryDate != null) initialDate = _expiryDate!;
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1940),
-      lastDate: DateTime(2050),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -191,12 +235,86 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  Future<void> _checkAvailability() async {
+    final id = _idController.text.replaceAll(RegExp(r'[-\s]'), '').toUpperCase();
+    if (id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an ID number first')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCheckingAvailability = true;
+      _availabilityMessage = null;
+    });
+
+    try {
+      // Check if it's the SAME ID as existing driver (if editing)
+      if (widget.existingDriver != null &&
+          id == widget.existingDriver!.idNumber.replaceAll(RegExp(r'[-\s]'), '').toUpperCase()) {
+        setState(() {
+          _isIdChecked = true;
+          _isIdAvailable = true;
+          _isCheckingAvailability = false;
+          _availabilityMessage = 'Using current driver ID';
+        });
+        return;
+      }
+
+      final existing = await SupabaseService.getDriver(id, null);
+      setState(() {
+        _isIdChecked = true;
+        _isCheckingAvailability = false;
+        if (existing == null) {
+          _isIdAvailable = true;
+          _availabilityMessage = 'ID is available for registration';
+        } else {
+          _isIdAvailable = false;
+          _availabilityMessage = 'A driver with this ID already exists';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isCheckingAvailability = false;
+        _availabilityMessage = 'Error checking availability';
+      });
+    }
+  }
+
   Future<void> _saveToSupabase() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (!_isIdChecked || !_isIdAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_availabilityMessage ?? 'Please verify ID availability first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     if (_dob == null || _issueDate == null || _expiryDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select all required dates')),
+      );
+      return;
+    }
+
+    // Age validation (16+)
+    final now = DateTime.now();
+    int age = now.year - _dob!.year;
+    if (now.month < _dob!.month ||
+        (now.month == _dob!.month && now.day < _dob!.day)) {
+      age--;
+    }
+    if (age < 16) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Driver must be at least 16 years old'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -210,6 +328,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
+    if (_expiryDate!.isBefore(_issueDate!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('License expiry date cannot be before the issue date'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_imageFile == null && _existingImageUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Driver photo is required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Show loading context
     showDialog(
       context: context,
@@ -218,9 +356,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
 
     // Saving to Supabase
-    bool success;
+    String? errorMessage;
     if (widget.existingDriver != null) {
-      success = await SupabaseService.updateDriverWithLicenses(
+      errorMessage = await SupabaseService.updateDriverWithLicenses(
         driverId: widget.existingDriver!.id,
         surname: _surnameController.text.toUpperCase(),
         givenNames: _nameController.text.toUpperCase(),
@@ -241,7 +379,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             .toList(),
       );
     } else {
-      success = await SupabaseService.saveDriverWithLicenses(
+      errorMessage = await SupabaseService.saveDriverWithLicenses(
         surname: _surnameController.text.toUpperCase(),
         givenNames: _nameController.text.toUpperCase(),
         dob: DateFormat('dd/MM/yyyy').format(_dob!),
@@ -264,7 +402,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!mounted) return;
     Navigator.pop(context); // Pop loading
 
-    if (success) {
+    if (errorMessage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -278,10 +416,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Failed to save to Supabase. Check network and RLS policies.',
-          ),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -372,12 +509,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             desktop: 32.0,
                           ),
                         ),
-                        _buildTextField(
-                          _idController,
-                          '5. ID Number (No hyphens)',
-                          Icons.credit_card_outlined,
-                          res,
-                        ),
+                        _buildIdField(res),
+                        if (_availabilityMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8, left: 16),
+                            child: Text(
+                              _availabilityMessage!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _isIdAvailable
+                                    ? AppColors.zimGreen
+                                    : Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 24),
                         _buildFingerprintSection(res),
 
@@ -540,6 +686,53 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           color: AppColors.textMain,
         ),
       ),
+    );
+  }
+
+  Widget _buildIdField(ResponsiveSize res) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildTextField(
+            _idController,
+            '5. ID Number (No hyphens)',
+            Icons.credit_card_outlined,
+            res,
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 56, // Match textfield height roughly
+          child: ElevatedButton(
+            onPressed: _isCheckingAvailability ? null : _checkAvailability,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isIdChecked
+                  ? (_isIdAvailable ? AppColors.zimGreen : Colors.red)
+                  : AppColors.sadcPink,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(res.borderRadius * 1.5),
+              ),
+            ),
+            child: _isCheckingAvailability
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(
+                    _isIdChecked
+                        ? (_isIdAvailable ? Icons.check_circle : Icons.error)
+                        : Icons.search,
+                    color: Colors.white,
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -811,8 +1004,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       final result = await _fingerprintService.enrollFinger();
       if (result != null) {
+        final template = result['template'];
+        
+        // Check Uniqueness
+        final ownerName = await SupabaseService.checkFingerprintUniqueness(template, widget.existingDriver?.id);
+        
+        if (ownerName != null) {
+          if (mounted) {
+            setState(() => _currentlyCapturingFinger = null);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Duplicate Fingerprint: This biometric is already registered to $ownerName.'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+          return;
+        }
+
         setState(() {
-          _capturedTemplates[fingerType] = result['template'];
+          _capturedTemplates[fingerType] = template;
           _capturedImages[fingerType] = result['image'];
         });
         if (!mounted) return;

@@ -223,7 +223,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       hint: const Text('All Roles'),
                       items: const [
                         DropdownMenuItem(value: null, child: Text('All Roles')),
-                        DropdownMenuItem(value: 'ADMIN', child: Text('Admin')),
+                        DropdownMenuItem(value: 'SYSTEM_ADMIN', child: Text('Admin')),
                         DropdownMenuItem(
                           value: 'POLICE_OFFICER',
                           child: Text('Police Officer'),
@@ -235,10 +235,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         DropdownMenuItem(
                           value: 'TSCZ_OFFICER',
                           child: Text('TSCZ Officer'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'MOH_OFFICER',
-                          child: Text('MOH Officer'),
                         ),
                       ],
                       onChanged: (value) {
@@ -373,13 +369,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               children: [
                 // Role Editor
                 DropdownButton<String>(
-                  value:
-                      [
-                        'ADMIN',
+                  value: [
+                        'SYSTEM_ADMIN',
                         'POLICE_OFFICER',
                         'VID_REGISTRAR',
                         'TSCZ_OFFICER',
-                        'MOH_OFFICER',
                       ].contains(role)
                       ? role
                       : null,
@@ -390,7 +384,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                   underline: Container(),
                   items: const [
-                    DropdownMenuItem(value: 'ADMIN', child: Text('Admin')),
+                    DropdownMenuItem(value: 'SYSTEM_ADMIN', child: Text('Admin')),
                     DropdownMenuItem(
                       value: 'POLICE_OFFICER',
                       child: Text('Police'),
@@ -403,7 +397,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       value: 'TSCZ_OFFICER',
                       child: Text('TSCZ'),
                     ),
-                    DropdownMenuItem(value: 'MOH_OFFICER', child: Text('MOH')),
                   ],
                   onChanged:
                       id == SupabaseService.client.auth.currentUser?.id

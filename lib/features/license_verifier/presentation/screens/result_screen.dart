@@ -128,7 +128,6 @@ class _ResultScreenState extends State<ResultScreen> {
                           _userProfile != null &&
                           _userProfile?['is_approved'] == true &&
                           (_userProfile?['role'] == 'VID_REGISTRAR' ||
-                              _userProfile?['role'] == 'ADMIN' ||
                               _userProfile?['role'] == 'SYSTEM_ADMIN')) ...[
                         const SizedBox(height: 16),
                         OutlinedButton.icon(
@@ -294,6 +293,20 @@ class _ResultScreenState extends State<ResultScreen> {
                       '5. License No',
                       (driver?.licenses.isNotEmpty ?? false)
                           ? driver!.licenses.first.licenseNumber
+                          : '---',
+                      res,
+                    ),
+                    _dataRow(
+                      '4a. Issue Date',
+                      (driver?.licenses.isNotEmpty ?? false)
+                          ? driver!.licenses.first.issueDate
+                          : '---',
+                      res,
+                    ),
+                    _dataRow(
+                      '4b. Expiry Date',
+                      (driver?.licenses.isNotEmpty ?? false)
+                          ? driver!.licenses.first.expiryDate
                           : '---',
                       res,
                     ),

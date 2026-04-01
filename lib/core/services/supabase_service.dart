@@ -164,6 +164,35 @@ class SupabaseService {
     }
   }
 
+  static Future<String?> checkFingerprintUniqueness(
+    String templateData,
+    String? excludeDriverId,
+  ) async {
+    try {
+      final query = client
+          .from('driver_biometrics')
+          .select('driver_id, drivers(surname, given_names)')
+          .eq('template_data', templateData);
+
+      if (excludeDriverId != null) {
+        query.neq('driver_id', excludeDriverId);
+      }
+
+      final result = await query.maybeSingle();
+      if (result != null) {
+        final driver = result['drivers'];
+        if (driver != null) {
+          return '${driver['surname']} ${driver['given_names']}';
+        }
+        return 'Another driver';
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Fingerprint Check Error: $e');
+      return null;
+    }
+  }
+
   static Future<Driver?> getDriverById(String driverId) async {
     try {
       final data = await client
@@ -358,7 +387,7 @@ class SupabaseService {
     }
   }
 
-  static Future<bool> updateDriverWithLicenses({
+  static Future<String?> updateDriverWithLicenses({
     required String driverId,
     required String surname,
     required String givenNames,
@@ -371,10 +400,35 @@ class SupabaseService {
     XFile? imageFile,
     String? currentImagePath,
     String? gender,
-    List<Map<String, String>>?
-    biometrics, // [{finger_type: '...', template_data: '...'}]
+    List<Map<String, String>>? biometrics, // [{finger_type: '...', template_data: '...'}]
   }) async {
     try {
+      // 0. Check for duplicates if ID or license changed
+      final existing = await getDriver(idNumber, licenseNumber);
+      if (existing != null && existing.id != driverId) {
+        if (existing.idNumber == idNumber) {
+          return 'A driver with this ID number already exists';
+        }
+        for (var lic in existing.licenses) {
+          if (lic.licenseNumber == licenseNumber) {
+            return 'A driver with this license number already exists';
+          }
+        }
+      }
+
+      // 0b. Check Fingerprint Uniqueness
+      if (biometrics != null && biometrics.isNotEmpty) {
+        for (var bio in biometrics) {
+          final template = bio['template_data'];
+          if (template != null) {
+            final ownerName = await checkFingerprintUniqueness(template, driverId);
+            if (ownerName != null) {
+              return 'This fingerprint is already registered to $ownerName';
+            }
+          }
+        }
+      }
+
       String? imagePath = currentImagePath;
 
       // 1. Upload new image if provided
@@ -447,14 +501,14 @@ class SupabaseService {
         await client.from('driver_biometrics').insert(bioInserts);
       }
 
-      return true;
+      return null; // Success
     } catch (e) {
       debugPrint('Supabase Update Error: $e');
-      return false;
+      return 'Failed to update driver: ${e.toString()}';
     }
   }
 
-  static Future<bool> saveDriverWithLicenses({
+  static Future<String?> saveDriverWithLicenses({
     required String surname,
     required String givenNames,
     required String dob,
@@ -468,6 +522,33 @@ class SupabaseService {
     List<Map<String, String>>? biometrics,
   }) async {
     try {
+      // 0. Duplicate Check
+      final existing = await getDriver(idNumber, licenseNumber);
+      if (existing != null) {
+        if (existing.idNumber == idNumber) {
+          return 'A driver with this ID number already exists';
+        }
+        for (var lic in existing.licenses) {
+          if (lic.licenseNumber == licenseNumber) {
+            return 'A driver with this license number already exists';
+          }
+        }
+        return 'A driver with these details already exists';
+      }
+
+      // 0b. Check Fingerprint Uniqueness
+      if (biometrics != null && biometrics.isNotEmpty) {
+        for (var bio in biometrics) {
+          final template = bio['template_data'];
+          if (template != null) {
+            final ownerName = await checkFingerprintUniqueness(template, null);
+            if (ownerName != null) {
+              return 'This fingerprint is already registered to $ownerName';
+            }
+          }
+        }
+      }
+
       String? imagePath;
 
       // 1. Upload Image if exists
@@ -528,10 +609,25 @@ class SupabaseService {
 
       await client.from('driver_licenses').insert(licenseInserts);
 
-      return true;
+      // 4. Insert Biometrics
+      if (biometrics != null && biometrics.isNotEmpty) {
+        final bioInserts = biometrics
+            .map(
+              (b) => {
+                'driver_id': driverId,
+                'finger_type': b['finger_type'],
+                'template_data': b['template_data'],
+              },
+            )
+            .toList();
+
+        await client.from('driver_biometrics').insert(bioInserts);
+      }
+
+      return null; // Success
     } catch (e) {
       debugPrint('Supabase Save Error: $e');
-      return false;
+      return 'Failed to save driver: ${e.toString()}';
     }
   }
 
