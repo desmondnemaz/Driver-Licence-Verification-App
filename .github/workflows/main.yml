@@ -1,0 +1,38 @@
+name: Flutter Web Deploy
+
+on:
+  push:
+    branches:
+      - main # Triggers the build every time you push to the main branch
+
+# Gives GitHub Actions permission to commit the built files to your repository
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Pull the code from your repository
+      - uses: actions/checkout@v4
+
+      # 2. Set up the Flutter environment
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # 3. Get your project dependencies
+      - name: Get dependencies
+        run: flutter pub get
+
+      # 4. Build the Flutter Web version of your app
+      - name: Build Web
+        run: flutter build web --release
+
+      # 5. Deploy the finished 'build/web' folder to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/web # The folder the action should deploy
+          branch: gh-pages  # The branch the action deploys to (created automatically)
