@@ -28,7 +28,7 @@ jobs:
 
       # 4. Build the Flutter Web version of your app
       - name: Build Web
-        run: flutter build web --release
+        run: flutter build web --release --base-href "/Driver-Licence-Verification-App/"
 
       # 5. Deploy the finished 'build/web' folder to GitHub Pages
       - name: Deploy to GitHub Pages
