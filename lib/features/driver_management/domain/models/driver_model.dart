@@ -1,3 +1,5 @@
+import 'package:driver_license_verifier_app/core/services/encryption_service.dart';
+
 class Driver {
   final String id;
   final String surname;
@@ -9,6 +11,7 @@ class Driver {
   final List<DriverLicense> licenses;
   final List<DefensiveCertificate> certificates;
   final List<DriverBiometric> biometrics;
+  final bool wasPlaintextInDb;
 
   Driver({
     required this.id,
@@ -21,6 +24,7 @@ class Driver {
     this.licenses = const [],
     this.certificates = const [],
     this.biometrics = const [],
+    this.wasPlaintextInDb = false,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -39,10 +43,22 @@ class Driver {
         .map((b) => DriverBiometric.fromJson(b as Map<String, dynamic>))
         .toList();
 
+    final rawSurname = json['surname'] ?? '';
+    final rawGivenNames = json['given_names'] ?? '';
+
+    final bool surnameIsEncrypted = EncryptionService.isEncrypted(rawSurname);
+    final bool givenNamesIsEncrypted = EncryptionService.isEncrypted(rawGivenNames);
+
+    final bool wasPlaintext = (rawSurname.isNotEmpty && !surnameIsEncrypted) ||
+                              (rawGivenNames.isNotEmpty && !givenNamesIsEncrypted);
+
+    final decryptedSurname = EncryptionService.decrypt(rawSurname);
+    final decryptedGivenNames = EncryptionService.decrypt(rawGivenNames);
+
     return Driver(
       id: json['id'] ?? '',
-      surname: json['surname'] ?? '',
-      givenNames: json['given_names'] ?? '',
+      surname: decryptedSurname,
+      givenNames: decryptedGivenNames,
       dob: json['dob'] ?? '',
       idNumber: json['id_number'] ?? '',
       driverImagePath: json['driver_image_path'],
@@ -50,6 +66,7 @@ class Driver {
       licenses: licenseList,
       certificates: certList,
       biometrics: biometricList,
+      wasPlaintextInDb: wasPlaintext,
     );
   }
 

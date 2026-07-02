@@ -403,13 +403,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     Navigator.pop(context); // Pop loading
 
     if (errorMessage == null) {
+      final String successMessage;
+      if (widget.existingDriver != null) {
+        if (widget.existingDriver!.wasPlaintextInDb) {
+          successMessage = 'Driver details updated (first name and surname encrypted for security)';
+        } else {
+          successMessage = 'Driver details updated';
+        }
+      } else {
+        successMessage = 'Driver registered (first name and surname encrypted for security)';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            widget.existingDriver != null
-                ? 'Driver details updated'
-                : 'Driver registered with secure image upload',
-          ),
+          content: Text(successMessage),
           backgroundColor: AppColors.zimGreen,
         ),
       );

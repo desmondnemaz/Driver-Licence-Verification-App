@@ -2,6 +2,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:driver_license_verifier_app/features/driver_management/domain/models/driver_model.dart';
+import 'package:driver_license_verifier_app/core/services/encryption_service.dart';
 
 class SupabaseService {
   static final SupabaseClient client = Supabase.instance.client;
@@ -182,7 +183,9 @@ class SupabaseService {
       if (result != null) {
         final driver = result['drivers'];
         if (driver != null) {
-          return '${driver['surname']} ${driver['given_names']}';
+          final String decryptedSurname = EncryptionService.decrypt(driver['surname'] ?? '');
+          final String decryptedGivenNames = EncryptionService.decrypt(driver['given_names'] ?? '');
+          return '$decryptedSurname $decryptedGivenNames';
         }
         return 'Another driver';
       }
@@ -301,37 +304,62 @@ class SupabaseService {
   }) async {
     try {
       final user = client.auth.currentUser;
+      
+      // Encrypt driver_name in audit details if present to avoid leaking plaintext PII
+      Map<String, dynamic>? securedDetails;
+      if (details != null) {
+        securedDetails = Map<String, dynamic>.from(details);
+        if (securedDetails.containsKey('driver_name')) {
+          final String originalName = securedDetails['driver_name']?.toString() ?? '';
+          securedDetails['driver_name'] = EncryptionService.encrypt(originalName);
+        }
+      }
+
       await client.from('audit_logs').insert({
         'action': action,
         'performed_by': user?.id,
         'target_entity_id': targetEntityId,
-        'details': details,
+        'details': securedDetails ?? details,
       });
     } catch (e) {
       debugPrint('Audit Log Error: $e');
     }
   }
 
-
+  static List<Map<String, dynamic>> _decryptAuditLogs(List<dynamic> logs) {
+    return logs.map((log) {
+      final map = Map<String, dynamic>.from(log);
+      final details = map['details'] as Map<String, dynamic>?;
+      if (details != null && details.containsKey('driver_name')) {
+        final decryptedDetails = Map<String, dynamic>.from(details);
+        final String encryptedName = decryptedDetails['driver_name']?.toString() ?? '';
+        decryptedDetails['driver_name'] = EncryptionService.decrypt(encryptedName);
+        map['details'] = decryptedDetails;
+      }
+      return map;
+    }).toList();
+  }
 
   static Future<List<Map<String, dynamic>>> getLatestAuditLogs({
     int limit = 5,
   }) async {
     try {
-      return await client
+      final List<dynamic> response = await client
           .from('audit_logs')
           .select('*, profiles(full_name)')
           .order('created_at', ascending: false)
           .limit(limit);
+      return _decryptAuditLogs(response);
     } catch (e) {
       if (e.toString().contains('PGRST200')) {
         debugPrint('Relationship missing, falling back to simple audit log fetch.');
         try {
-          return await client
+          final List<dynamic> response = await client
               .from('audit_logs')
               .select('*')
               .order('created_at', ascending: false)
               .limit(limit);
+          return _decryptAuditLogs(response);
         } catch (e2) {
           debugPrint('Fallback fetch failed: $e2');
         }
@@ -354,30 +382,35 @@ class SupabaseService {
           .from('audit_logs')
           .select('*, profiles(full_name)');
 
+      final List<dynamic> response;
       if (actionFilter != null && actionFilter.isNotEmpty) {
-        return await filterQuery
+        response = await filterQuery
             .eq('action', actionFilter)
             .order('created_at', ascending: false)
             .range(offset, offset + limit - 1);
+      } else {
+        response = await filterQuery
+            .order('created_at', ascending: false)
+            .range(offset, offset + limit - 1);
       }
-
-      return await filterQuery
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+      return _decryptAuditLogs(response);
     } catch (e) {
       if (e.toString().contains('PGRST200')) {
         debugPrint('Relationship missing, falling back to simple audit log fetch.');
         try {
           var fallback = client.from('audit_logs').select('*');
+          final List<dynamic> response;
           if (actionFilter != null && actionFilter.isNotEmpty) {
-            return await fallback
+            response = await fallback
                 .eq('action', actionFilter)
                 .order('created_at', ascending: false)
                 .range(offset, offset + limit - 1);
+          } else {
+            response = await fallback
+                .order('created_at', ascending: false)
+                .range(offset, offset + limit - 1);
           }
-          return await fallback
-              .order('created_at', ascending: false)
-              .range(offset, offset + limit - 1);
+          return _decryptAuditLogs(response);
         } catch (e2) {
           debugPrint('Fallback fetch failed: $e2');
         }
@@ -451,8 +484,8 @@ class SupabaseService {
       await client
           .from('drivers')
           .update({
-            'surname': surname,
-            'given_names': givenNames,
+            'surname': EncryptionService.encrypt(surname),
+            'given_names': EncryptionService.encrypt(givenNames),
             'dob': _parseDate(dob),
             'id_number': idNumber,
             'driver_image_path': imagePath,
@@ -574,8 +607,8 @@ class SupabaseService {
       final driverResponse = await client
           .from('drivers')
           .insert({
-            'surname': surname,
-            'given_names': givenNames,
+            'surname': EncryptionService.encrypt(surname),
+            'given_names': EncryptionService.encrypt(givenNames),
             'dob': _parseDate(dob), // format for PG date: YYYY-MM-DD
             'id_number': idNumber,
             'driver_image_path': imagePath,
@@ -661,23 +694,42 @@ class SupabaseService {
             '*, $licenseSelect, defensive_certificates(*), driver_biometrics(*)',
           );
 
-      if (query != null && query.isNotEmpty) {
-        builder = builder.or(
-          'surname.ilike.%$query%,given_names.ilike.%$query%,id_number.ilike.%$query%',
-        );
-      }
-
       if (licenseCode != null &&
           licenseCode.isNotEmpty &&
           licenseCode != 'All') {
         builder = builder.eq('driver_licenses.license_code', licenseCode);
       }
 
+      // If we have a search query, fetch matches and filter/sort in memory
+      if (query != null && query.isNotEmpty) {
+        final List<dynamic> response = await builder;
+        final allDrivers = response.map((json) => Driver.fromJson(json)).toList();
+
+        final queryLower = query.toLowerCase();
+        final filtered = allDrivers.where((driver) {
+          return driver.surname.toLowerCase().contains(queryLower) ||
+              driver.givenNames.toLowerCase().contains(queryLower) ||
+              driver.idNumber.toLowerCase().contains(queryLower);
+        }).toList();
+
+        // Sort alphabetically by decrypted surname
+        filtered.sort((a, b) => a.surname.toLowerCase().compareTo(b.surname.toLowerCase()));
+
+        if (offset >= filtered.length) {
+          return [];
+        }
+        final end = (offset + limit) < filtered.length ? (offset + limit) : filtered.length;
+        return filtered.sublist(offset, end);
+      }
+
+      // If no query, fetch paginated records and sort them alphabetically
       final List<dynamic> response = await builder
           .order('surname', ascending: true)
           .range(offset, offset + limit - 1);
 
-      return response.map((json) => Driver.fromJson(json)).toList();
+      final drivers = response.map((json) => Driver.fromJson(json)).toList();
+      drivers.sort((a, b) => a.surname.toLowerCase().compareTo(b.surname.toLowerCase()));
+      return drivers;
     } catch (e) {
       debugPrint('Supabase Fetch Drivers Error: $e');
       return [];

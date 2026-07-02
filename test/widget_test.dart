@@ -1,8 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:driver_license_verifier_app/main.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
+    // Initialize dummy Supabase for testing to prevent initialization errors
+    await Supabase.initialize(
+      url: 'https://dummy.supabase.co',
+      anonKey: 'dummyAnonKey',
+    );
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(const DriverVerifierApp());
     
